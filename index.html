@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoAIexist: Rashomon in Rogers Park</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background-color: #1a1a1a; /* Deep Charcoal - "dark starry sky" base */
+      color: #1a1a1a; 
+      margin: 0;
+      padding: 0; 
+      height: 100vh;
+      display: flex; /* For overall layout */
+      flex-direction: column; /* Stack root content and taskbar */
+      overflow: hidden; /* Prevent body scrollbars */
+      position: relative; 
+    }
+
+    body::after { /* Scanlines */
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        rgba(20, 20, 20, 0) 0%,
+        rgba(20, 20, 20, 0) 97%,
+        rgba(255, 255, 255, 0.02) 98%, 
+        rgba(0, 0, 0, 0.05) 100% 
+      );
+      background-size: 100% 3px; 
+      animation: scanlines 15s linear infinite;
+      z-index: 0; /* Behind actual content but above desktop-bg if needed */
+      opacity: 0.4; 
+    }
+
+    @keyframes scanlines {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 300px; }
+    }
+
+    #desktop-bg-container { /* Stars background */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1; /* Ensure it's behind everything */
+    }
+
+    .desktop-star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      animation: twinkle 5s infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .mouse-trail-particle {
+      position: fixed; 
+      width: 3px;
+      height: 3px;
+      border-radius: 1px; 
+      pointer-events: none;
+      z-index: 10000; 
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+      opacity: 0.8;
+    }
+
+    .mouse-trail-particle.fade-out {
+      opacity: 0;
+      transform: scale(0.3) translate(10px, 10px); 
+    }
+
+    #root { /* Main content area for the "application window" */
+      flex-grow: 1; /* Takes up available space above taskbar */
+      overflow-y: auto; /* Allows app window content to scroll */
+      overflow-x: hidden;
+      padding-top: 20px; /* Space for window title bar */
+      padding-bottom: 20px; /* Space below window */
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      scrollbar-width: thin;
+      scrollbar-color: #D4D0C8 #B0B0B0;
+    }
+    
+    #taskbar {
+      height: 30px;
+      background-color: #D4D0C8; /* W2K Standard Grey */
+      border-top: 1px solid #FFFFFF;
+      box-shadow: 0 -1px 2px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 5px;
+      box-sizing: border-box;
+      flex-shrink: 0; /* Prevents taskbar from shrinking */
+      z-index: 1001; /* Above desktop, below start menu if it overlaps */
+    }
+
+    #start-button {
+      background-color: #D4D0C8;
+      border-top: 1px solid #FFFFFF;
+      border-left: 1px solid #FFFFFF;
+      border-bottom: 1px solid #808080;
+      border-right: 1px solid #808080;
+      padding: 3px 10px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 14px;
+      color: #1a1a1a;
+      cursor: pointer;
+      margin-right: 10px;
+      font-weight: bold; /* Make "Start" bold */
+      min-width: auto;
+    }
+    #start-button:active {
+      border-top-color: #808080;
+      border-left-color: #808080;
+      border-bottom-color: #FFFFFF;
+      border-right-color: #FFFFFF;
+    }
+
+    #taskbar-app-title {
+      flex-grow: 1;
+      font-size: 12px;
+      padding: 2px 8px;
+      margin: 2px 5px;
+      border: 1px inset #B0B0B0;
+      background-color: #C0C0C0;
+      color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 100px;
+    }
+    
+    #taskbar-clock {
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px inset #B0B0B0;
+      background-color: #C0C0C0;
+      color: #1a1a1a;
+      margin-left: auto; /* Pushes clock to the right */
+    }
+
+    #start-menu {
+      position: fixed;
+      bottom: 30px; /* Above taskbar */
+      left: 0;
+      background-color: #D4D0C8;
+      border-top: 1px solid #FFFFFF;
+      border-left: 1px solid #FFFFFF;
+      border-right: 1px solid #808080;
+      border-bottom: 1px solid #808080; /* Add bottom border for consistency */
+      box-shadow: 2px -2px 5px rgba(0,0,0,0.2);
+      padding: 5px;
+      z-index: 1002; /* Above taskbar */
+      min-width: 200px;
+    }
+    #start-menu button {
+      display: block;
+      width: calc(100% - 10px); /* Account for padding */
+      margin: 5px; /* Use margin for spacing instead of direct li margin */
+      text-align: left;
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+
+
+    @keyframes buttonHoverPulse {
+      0%, 100% { box-shadow: 0 0 2px 0px transparent; }
+      50% { box-shadow: 0 0 5px 1px #00ffcc; } /* Olo/Cyan */
+    }
+
+    button {
+      background-color: #D4D0C8; /* W2K Standard Grey */
+      border-top: 1px solid #FFFFFF; 
+      border-left: 1px solid #FFFFFF; 
+      border-bottom: 1px solid #808080; 
+      border-right: 1px solid #808080; 
+      padding: 8px 15px;
+      font-family: 'Press Start 2P', cursive;
+      cursor: pointer;
+      color: #1a1a1a; /* Deep Charcoal Text */
+      font-size: 14px;
+      margin: 8px 5px;
+      min-width: 200px;
+      text-align: center;
+      box-shadow: none; 
+      transition: transform 0.1s ease-out, background-color 0.1s ease-out, box-shadow 0.1s ease-out;
+    }
+    button:hover {
+      background-color: #00ffcc; /* "Olo" / Bright Cyan */
+      color: #1a1a1a;
+      border-top-color: #66ffdd; 
+      border-left-color: #66ffdd;
+      border-bottom-color: #00bbaa; 
+      border-right-color: #00bbaa;
+      transform: scale(1.01); 
+      animation: buttonHoverPulse 0.7s infinite alternate;
+    }
+    button:active {
+      border-top-color: #808080; 
+      border-left-color: #808080;
+      border-bottom-color: #FFFFFF;
+      border-right-color: #FFFFFF;
+      background-color: #c0c0c0; /* Slightly darker grey on press for W2K */
+      transform: scale(0.99); 
+      animation: none; 
+      box-shadow: inset 1px 1px 2px #00000030;
+    }
+    button[disabled], button[aria-disabled="true"] {
+      color: #808080; 
+      border-top-color: #E0E0E0; 
+      border-left-color: #E0E0E0;
+      border-bottom-color: #A0A0A0; 
+      border-right-color: #A0A0A0;
+      background-color: #D4D0C8; 
+      cursor: not-allowed;
+      opacity: 0.7;
+      transform: none;
+      animation: none;
+      box-shadow: none;
+    }
+
+    h1, h2, h3 {
+      color: #1a1a1a; 
+      text-shadow: 1px 1px #B0B0B0; 
+    }
+    .app-container h2, #root h2 { 
+        font-size: 22px;
+    }
+    .app-container h3, #root h3 { 
+        font-size: 19px;
+    }
+
+    p { margin-bottom: 1em; }
+    ul { list-style: none; padding: 0; margin:0; }
+    /* li { margin-bottom: 10px; } */ /* Removed for Start Menu button control */
+    .app-container { 
+        width: 100%;
+        max-width: 750px; /* This makes the StyledWindow not full width */
+    }
+    .choices-list button {
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .selected-codex-button {
+      border-left-width: 4px !important;
+      border-left-color: #00ffcc !important; 
+      background-color: #E0E0E0 !important; 
+      font-weight: bold;
+      color: #1a1a1a !important;
+    }
+
+    /* Custom Scrollbar Styles - WebKit */
+    ::-webkit-scrollbar {
+      width: 17px; 
+      height: 17px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #B0B0B0; /* W2K Scrollbar Track Grey */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D4D0C8; /* W2K Standard Grey */
+      border-top: 1px solid #FFFFFF;
+      border-left: 1px solid #FFFFFF;
+      border-bottom: 1px solid #808080;
+      border-right: 1px solid #808080;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C0C0C0; /* Slightly darker on hover */
+    }
+    ::-webkit-scrollbar-button {
+      background: #D4D0C8; /* W2K Standard Grey */
+      border-top: 1px solid #FFFFFF;
+      border-left: 1px solid #FFFFFF;
+      border-bottom: 1px solid #808080;
+      border-right: 1px solid #808080;
+      display: block;
+      height: 17px;
+      width: 17px;
+    }
+    ::-webkit-scrollbar-button:active {
+        border-top-color: #808080;
+        border-left-color: #808080;
+        border-bottom-color: #FFFFFF;
+        border-right-color: #FFFFFF;
+        background-color: #C0C0C0; /* Slightly darker on press */
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <div id="desktop-bg-container"></div>
+  <div id="root"></div>
+  <script type="module" src="index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
