@@ -2,6 +2,66 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 
+// --- Background Visuals ---
+const PARALLAX_SETS = [
+  [
+    'assets/Parallax Backgrounds/back.png',
+    'assets/Parallax Backgrounds/middle.png',
+    'assets/Parallax Backgrounds/front.png',
+  ],
+  [
+    'assets/RetroWindowsGUI/Windows_Example_Main.png',
+    'assets/Parallax Backgrounds/middle.png',
+    'assets/Parallax Backgrounds/front.png',
+  ],
+];
+
+const ParallaxBackground: React.FC = () => {
+  const [index, setIndex] = useState(0);
+  const refs = useRef<HTMLDivElement[]>([]);
+  useEffect(() => {
+    let frame = 0;
+    let anim: number;
+    const animate = () => {
+      frame += 0.5;
+      refs.current.forEach((el, i) => {
+        const speed = (i + 1) * 0.2;
+        el.style.backgroundPosition = `${-frame * speed}px 0`;
+      });
+      anim = requestAnimationFrame(animate);
+    };
+    anim = requestAnimationFrame(animate);
+    const interval = setInterval(() => setIndex((i) => (i + 1) % PARALLAX_SETS.length), 15000);
+    return () => {
+      cancelAnimationFrame(anim);
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1 }}>
+      {PARALLAX_SETS[index].map((src, i) => (
+        <div
+          key={i}
+          ref={(el) => {
+            if (el) refs.current[i] = el;
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${src})`,
+            backgroundRepeat: 'repeat-x',
+            backgroundSize: 'cover',
+            willChange: 'background-position',
+            pointerEvents: 'none',
+            zIndex: i,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 // --- Sound & Music Implementation ---
 let currentMusic: HTMLAudioElement | null = null;
 // const activeSounds: HTMLAudioElement[] = []; // Optional: for managing multiple SFX instances
@@ -518,6 +578,11 @@ const App: React.FC = () => {
 const container = document.getElementById('root');
 if (container) { createRoot(container).render(<App />); }
 else { console.error('Failed to find the root element'); }
+
+const bgContainer = document.getElementById('desktop-bg-container');
+if (bgContainer) {
+  createRoot(bgContainer).render(<ParallaxBackground />);
+}
 // Ensure the Open CoAIexicon button has its icon
 const InGameScreenWithIcon: React.FC<React.ComponentProps<typeof InGameScreen>> = (props) => {
     const originalOnNavigate = props.onNavigate;
