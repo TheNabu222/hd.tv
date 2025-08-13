@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
+import './index.css';
 
 // --- Background Visuals ---
 const PARALLAX_SETS = [
