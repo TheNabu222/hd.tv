@@ -454,9 +454,22 @@ const InGameScreen: React.FC<{ storyState: CurrentStoryState; onChoice: (nextNod
 const SettingsScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Settings" className="app-container" onClose={onBack}> <h2>Game Settings</h2> <p>Settings will appear here.</p> <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 const ProfilesScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Protagonist Profiles" className="app-container" onClose={onBack}> <h2>Character Profiles</h2> <p style={{marginBottom: '20px', fontSize: '13px', color: '#333333'}}>Meet the minds shaping Rogers Park.</p> {Object.values(CHARACTERS).map(char => ( <div key={char.id} style={{ marginBottom: '20px', padding: '10px', border: '1px solid #D4D0C8', backgroundColor: '#F9F9F9' }}> <h3 style={{marginTop: 0, marginBottom: '5px', fontSize: '16px', color: '#1a1a1a'}}>{char.name}</h3> <p style={{fontSize: '14px', lineHeight: '1.5', margin: 0, color: '#1a1a1a'}}> {char.description} </p> {(char.id === 'rizzlord') && <p style={{fontSize: '12px', color: '#B22222', marginTop: '8px', fontStyle: 'italic'}}>This protagonist is currently locked.</p>} </div> ))} <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 
-const DESKTOP_STAR_COLORS = ['#00ffcc', '#7722ff', '#bc72fa', '#72fade']; 
+const DESKTOP_STAR_COLORS = ['#00ffcc', '#7722ff', '#bc72fa', '#72fade'];
 const NUM_DESKTOP_STARS = 40;
 const CURSED_POINTER_TRAIL_COLORS = ['#72fade', '#bc72fa', '#defade', '#bc7fff'];
+
+const createDesktopStars = (container: HTMLElement) => {
+  for (let i = 0; i < NUM_DESKTOP_STARS; i++) {
+    const star = document.createElement('div');
+    star.className = 'desktop-star';
+    star.style.left = `${Math.random() * 100}vw`;
+    star.style.top = `${Math.random() * 100}vh`;
+    star.style.backgroundColor = DESKTOP_STAR_COLORS[Math.floor(Math.random() * DESKTOP_STAR_COLORS.length)];
+    star.style.animationDelay = `${Math.random() * 5}s`;
+    star.style.animationDuration = `${Math.random() * 3 + 3}s`;
+    container.appendChild(star);
+  }
+};
 
 const Clock: React.FC = () => {
   const [time, setTime] = useState(new Date());
@@ -487,8 +500,10 @@ const App: React.FC = () => {
   
   useEffect(() => {
     setStoryState(prevState => ({ ...prevState, unlockedCodexEntries: initializeUnlockedCodex() }));
-    // const bgContainer = document.getElementById('desktop-bg-container'); // Desktop stars removed for image bg
-    // if (bgContainer && !bgContainer.hasChildNodes()) { for (let i = 0; i < NUM_DESKTOP_STARS; i++) { const star = document.createElement('div'); star.className = 'desktop-star'; star.style.left = `${Math.random() * 100}vw`; star.style.top = `${Math.random() * 100}vh`; star.style.backgroundColor = DESKTOP_STAR_COLORS[Math.floor(Math.random() * DESKTOP_STAR_COLORS.length)]; star.style.animationDelay = `${Math.random() * 5}s`; star.style.animationDuration = `${Math.random() * 3 + 3}s`; bgContainer.appendChild(star); } }
+    const bgContainer = document.getElementById('desktop-bg-container');
+    if (bgContainer && !bgContainer.hasChildNodes()) {
+      createDesktopStars(bgContainer);
+    }
     let lastTrailTime = 0; const trailCooldown = 60; 
     const handleMouseMove = (event: MouseEvent) => { const currentTime = Date.now(); if (currentTime - lastTrailTime < trailCooldown) return; lastTrailTime = currentTime; if (Math.random() < 0.3) { const particle = document.createElement('div'); particle.className = 'mouse-trail-particle'; particle.style.left = `${event.clientX -2}px`; particle.style.top = `${event.clientY -2}px`; particle.style.backgroundColor = CURSED_POINTER_TRAIL_COLORS[Math.floor(Math.random() * CURSED_POINTER_TRAIL_COLORS.length)]; document.body.appendChild(particle); requestAnimationFrame(() => particle.classList.add('fade-out')); setTimeout(() => { if (particle.parentNode) particle.parentNode.removeChild(particle); }, 700); } };
     document.addEventListener('mousemove', handleMouseMove);
