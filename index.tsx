@@ -703,7 +703,15 @@ const App: React.FC = () => {
             setStoryState(loaded);
             setCurrentScreen('inGame');
             const char = loaded.characterId ? CHARACTERS[loaded.characterId] : null;
-            if (char?.backgroundMusic) playMusic(char.backgroundMusic); else playMusic('default_ingame_theme.mid');
+            const node = loaded.currentNodeId ? NODES[loaded.currentNodeId] : null;
+            if (node?.backgroundMusic) playMusic(node.backgroundMusic);
+            else if (char?.backgroundMusic) playMusic(char.backgroundMusic);
+            else playMusic('default_ingame_theme.mid');
+            if (node && char) {
+              setCurrentTaskbarTitle(node.title || char.name + "'s Journey");
+            } else {
+              setCurrentTaskbarTitle(GAME_TITLE + " - Main Menu");
+            }
           }}
         />
       )}
