@@ -64,6 +64,8 @@ const ParallaxBackground: React.FC = () => {
 
 // --- Sound & Music Implementation ---
 let currentMusic: HTMLAudioElement | null = null;
+let currentMusicId: string | null = null;
+let musicEnabled = true;
 // const activeSounds: HTMLAudioElement[] = []; // Optional: for managing multiple SFX instances
 
 const SFX_URL_MAP: Record<string, string> = {
@@ -148,7 +150,12 @@ const playSound = (soundId: string) => {
 };
 
 const playMusic = (trackId: string, loop: boolean = true) => {
+  currentMusicId = trackId;
   stopCurrentMusic();
+  if (!musicEnabled) {
+    console.log(`[MUSIC MUTED]: ${trackId}`);
+    return;
+  }
   const musicUrl = MUSIC_URL_MAP[trackId];
 
   if (musicUrl) {
@@ -461,7 +468,7 @@ const CURSED_POINTER_TRAIL_COLORS = ['#72fade', '#bc72fa', '#defade', '#bc7fff']
 const Clock: React.FC = () => {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const timerId = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timerId); }, []);
-  return <div id="taskbar-clock">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>;
+  return <div id="taskbar-clock" style={{ marginLeft: 0 }}>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>;
 };
 
 const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) => void; closeMenu: () => void; }> = ({ isOpen, onNavigate, closeMenu }) => {
@@ -470,9 +477,19 @@ const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) =>
   return ( <div id="start-menu"> <ul className="choices-list" style={{margin:0}}> <li><button onClick={() => handleNav('characterSelect')}><img src="assets/images/ui/archway_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />New Game</button></li> <li><button onClick={() => handleNav('profiles')}><img src="assets/images/ui/bird_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />Protagonist Profiles</button></li> </ul> </div> );
 };
 
-const Taskbar: React.FC<{ onStartButtonClick: () => void; currentWindowTitle: string; }> = ({ onStartButtonClick, currentWindowTitle }) => {
+const Taskbar: React.FC<{ onStartButtonClick: () => void; currentWindowTitle: string; isMusicEnabled: boolean; onMusicToggle: () => void; }> = ({ onStartButtonClick, currentWindowTitle, isMusicEnabled, onMusicToggle }) => {
   const handleStartClick = () => { playSound("ui_start_button_click.sfx"); onStartButtonClick(); };
-  return ( <div id="taskbar"> <button id="start-button" onClick={handleStartClick}><img src="assets/images/ui/star_icon.png" alt="Start" style={{width: '16px', height: '16px', imageRendering: 'pixelated'}} /></button> <div id="taskbar-app-title" title={currentWindowTitle}>{currentWindowTitle}</div> <Clock /> </div> );
+  const handleMusicClick = () => { playSound("ui_button_click_minor.sfx"); onMusicToggle(); };
+  return (
+    <div id="taskbar">
+      <button id="start-button" onClick={handleStartClick}><img src="assets/images/ui/star_icon.png" alt="Start" style={{width: '16px', height: '16px', imageRendering: 'pixelated'}} /></button>
+      <div id="taskbar-app-title" title={currentWindowTitle}>{currentWindowTitle}</div>
+      <div style={{ display:'flex', alignItems:'center', marginLeft:'auto' }}>
+        <button id="music-toggle" onClick={handleMusicClick} style={{ padding:'3px 8px', marginRight:'5px' }}>{isMusicEnabled ? '🔊' : '🔇'}</button>
+        <Clock />
+      </div>
+    </div>
+  );
 };
 
 const App: React.FC = () => {
@@ -481,6 +498,7 @@ const App: React.FC = () => {
   const [selectedCodexEntryId, setSelectedCodexEntryId] = useState<string | null>(null);
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   const [currentTaskbarTitle, setCurrentTaskbarTitle] = useState(GAME_TITLE + " - Main Menu");
+  const [isMusicOn, setIsMusicOn] = useState(true);
   const startMenuRef = useRef<HTMLDivElement>(null);
 
   const initializeUnlockedCodex = useMemo(() => () => { const initialUnlocks = new Set<string>(); Object.values(CODEX_ENTRIES).forEach(entry => { if (entry.unlockedInitially) initialUnlocks.add(entry.id); }); return initialUnlocks; }, []);
@@ -547,6 +565,18 @@ const App: React.FC = () => {
 
   const handleSelectCodexEntry = (entryId: string) => setSelectedCodexEntryId(entryId);
   const toggleStartMenu = () => setIsStartMenuOpen(prev => !prev);
+  const toggleMusic = () => {
+    setIsMusicOn(prev => {
+      const next = !prev;
+      musicEnabled = next;
+      if (!next) {
+        stopCurrentMusic();
+      } else if (currentMusicId) {
+        playMusic(currentMusicId);
+      }
+      return next;
+    });
+  };
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -566,7 +596,7 @@ const App: React.FC = () => {
         <div id="main-content-area" style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {renderScreen()}
         </div>
-        <Taskbar onStartButtonClick={toggleStartMenu} currentWindowTitle={currentTaskbarTitle} />
+        <Taskbar onStartButtonClick={toggleStartMenu} currentWindowTitle={currentTaskbarTitle} isMusicEnabled={isMusicOn} onMusicToggle={toggleMusic} />
       </div>
       <div ref={startMenuRef}>
         <StartMenu isOpen={isStartMenuOpen} onNavigate={handleNavigation} closeMenu={() => setIsStartMenuOpen(false)}/>
