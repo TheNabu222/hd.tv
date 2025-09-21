@@ -263,6 +263,62 @@ interface CurrentStoryState {
   unlockedCodexEntries: Set<string>;
 }
 
+const SAVE_STORAGE_KEY = 'hd.tv.storySaves';
+
+type SerializedStoryState = Omit<CurrentStoryState, 'unlockedCodexEntries'> & { unlockedCodexEntries: string[] };
+
+interface SavedGame {
+  id: string;
+  timestamp: number;
+  storyState: SerializedStoryState;
+}
+
+const serializeStoryState = (state: CurrentStoryState): SerializedStoryState => ({
+  ...state,
+  unlockedCodexEntries: Array.from(state.unlockedCodexEntries),
+});
+
+const deserializeStoryState = (data: SerializedStoryState): CurrentStoryState => ({
+  ...data,
+  unlockedCodexEntries: new Set(data.unlockedCodexEntries),
+});
+
+const loadSavedGames = (): SavedGame[] => {
+  try {
+    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistSavedGames = (saves: SavedGame[]) => {
+  localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(saves));
+};
+
+const addSavedGame = (state: CurrentStoryState) => {
+  const saves = loadSavedGames();
+  const newSave: SavedGame = {
+    id: Date.now().toString(),
+    timestamp: Date.now(),
+    storyState: serializeStoryState(state),
+  };
+  saves.push(newSave);
+  persistSavedGames(saves);
+};
+
+const updateSavedGame = (id: string, state: CurrentStoryState) => {
+  const saves = loadSavedGames().map(s =>
+    s.id === id ? { ...s, timestamp: Date.now(), storyState: serializeStoryState(state) } : s
+  );
+  persistSavedGames(saves);
+};
+
+const deleteSavedGame = (id: string) => {
+  const saves = loadSavedGames().filter(s => s.id !== id);
+  persistSavedGames(saves);
+};
+
 const GAME_TITLE = "CoAIexist: Rashomon in Rogers Park";
 
 const INITIAL_NABU_STATS: PlayerStats = {
@@ -461,6 +517,7 @@ const InGameScreen: React.FC<{ storyState: CurrentStoryState; onChoice: (nextNod
 const SettingsScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Settings" className="app-container" onClose={onBack}> <h2>Game Settings</h2> <p>Settings will appear here.</p> <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 const ProfilesScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Protagonist Profiles" className="app-container" onClose={onBack}> <h2>Character Profiles</h2> <p style={{marginBottom: '20px', fontSize: '13px', color: '#333333'}}>Meet the minds shaping Rogers Park.</p> {Object.values(CHARACTERS).map(char => ( <div key={char.id} style={{ marginBottom: '20px', padding: '10px', border: '1px solid #D4D0C8', backgroundColor: '#F9F9F9' }}> <h3 style={{marginTop: 0, marginBottom: '5px', fontSize: '16px', color: '#1a1a1a'}}>{char.name}</h3> <p style={{fontSize: '14px', lineHeight: '1.5', margin: 0, color: '#1a1a1a'}}> {char.description} </p> {(char.id === 'rizzlord') && <p style={{fontSize: '12px', color: '#B22222', marginTop: '8px', fontStyle: 'italic'}}>This protagonist is currently locked.</p>} </div> ))} <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 
+
 const DESKTOP_STAR_COLORS = ['#00ffcc', '#7722ff', '#bc72fa', '#72fade'];
 const NUM_DESKTOP_STARS = 40;
 const CURSED_POINTER_TRAIL_COLORS = ['#72fade', '#bc72fa', '#defade', '#bc7fff'];
@@ -484,10 +541,20 @@ const Clock: React.FC = () => {
   return <div id="taskbar-clock" style={{ marginLeft: 0 }}>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>;
 };
 
-const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) => void; closeMenu: () => void; }> = ({ isOpen, onNavigate, closeMenu }) => {
+const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) => void; closeMenu: () => void; openSaveLoad: (mode: 'save' | 'load') => void; canSave: boolean; }> = ({ isOpen, onNavigate, closeMenu, openSaveLoad, canSave }) => {
   if (!isOpen) return null;
   const handleNav = (screen: GameScreen) => { playSound("ui_start_menu_item_click.sfx"); onNavigate(screen); closeMenu(); };
-  return ( <div id="start-menu"> <ul className="choices-list" style={{margin:0}}> <li><button onClick={() => handleNav('characterSelect')}><img src="assets/images/ui/archway_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />New Game</button></li> <li><button onClick={() => handleNav('profiles')}><img src="assets/images/ui/bird_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />Protagonist Profiles</button></li> </ul> </div> );
+  const handleSaveLoad = (mode: 'save' | 'load') => { playSound("ui_start_menu_item_click.sfx"); openSaveLoad(mode); closeMenu(); };
+  return (
+    <div id="start-menu">
+      <ul className="choices-list" style={{margin:0}}>
+        <li><button onClick={() => handleNav('characterSelect')}><img src="assets/images/ui/archway_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />New Game</button></li>
+        <li><button onClick={() => handleNav('profiles')}><img src="assets/images/ui/bird_icon.png" alt="" style={{width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle', imageRendering: 'pixelated'}} />Protagonist Profiles</button></li>
+        <li><button onClick={() => handleSaveLoad('save')} disabled={!canSave} aria-disabled={!canSave}>Save Game</button></li>
+        <li><button onClick={() => handleSaveLoad('load')}>Load Game</button></li>
+      </ul>
+    </div>
+  );
 };
 
 const Taskbar: React.FC<{ onStartButtonClick: () => void; currentWindowTitle: string; isMusicEnabled: boolean; onMusicToggle: () => void; }> = ({ onStartButtonClick, currentWindowTitle, isMusicEnabled, onMusicToggle }) => {
@@ -513,6 +580,7 @@ const App: React.FC = () => {
   const [currentTaskbarTitle, setCurrentTaskbarTitle] = useState(GAME_TITLE + " - Main Menu");
   const [isMusicOn, setIsMusicOn] = useState(true);
   const startMenuRef = useRef<HTMLDivElement>(null);
+  const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load' | null>(null);
 
   const initializeUnlockedCodex = useMemo(() => () => { const initialUnlocks = new Set<string>(); Object.values(CODEX_ENTRIES).forEach(entry => { if (entry.unlockedInitially) initialUnlocks.add(entry.id); }); return initialUnlocks; }, []);
   
@@ -613,8 +681,35 @@ const App: React.FC = () => {
         </div>
         <Taskbar onStartButtonClick={toggleStartMenu} currentWindowTitle={currentTaskbarTitle} isMusicEnabled={isMusicOn} onMusicToggle={toggleMusic} />
       </div>
+      {saveLoadMode && (
+        <SaveLoadWindow
+          mode={saveLoadMode}
+          storyState={storyState}
+          onClose={() => setSaveLoadMode(null)}
+          onLoad={(loaded) => {
+            setStoryState(loaded);
+            setCurrentScreen('inGame');
+            const char = loaded.characterId ? CHARACTERS[loaded.characterId] : null;
+            const node = loaded.currentNodeId ? NODES[loaded.currentNodeId] : null;
+            if (node?.backgroundMusic) playMusic(node.backgroundMusic);
+            else if (char?.backgroundMusic) playMusic(char.backgroundMusic);
+            else playMusic('default_ingame_theme.mid');
+            if (node && char) {
+              setCurrentTaskbarTitle(node.title || char.name + "'s Journey");
+            } else {
+              setCurrentTaskbarTitle(GAME_TITLE + " - Main Menu");
+            }
+          }}
+        />
+      )}
       <div ref={startMenuRef}>
-        <StartMenu isOpen={isStartMenuOpen} onNavigate={handleNavigation} closeMenu={() => setIsStartMenuOpen(false)}/>
+        <StartMenu
+          isOpen={isStartMenuOpen}
+          onNavigate={handleNavigation}
+          closeMenu={() => setIsStartMenuOpen(false)}
+          openSaveLoad={(mode) => setSaveLoadMode(mode)}
+          canSave={!!(storyState.characterId && storyState.currentNodeId)}
+        />
       </div>
     </>
   );
