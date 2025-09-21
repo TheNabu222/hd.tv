@@ -1,0 +1,218 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background-color: #1a1a1a;
+  color: #1a1a1a;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+#desktop-bg-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.desktop-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+}
+
+.mouse-trail-particle {
+  display: none;
+}
+
+#root {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#taskbar {
+  height: 30px;
+  background-color: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 1001;
+}
+
+#start-button {
+  background-color: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-bottom: 1px solid #808080;
+  border-right: 1px solid #808080;
+  padding: 3px 10px;
+  font-size: 14px;
+  color: #1a1a1a;
+  cursor: pointer;
+  margin-right: 10px;
+  min-width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#start-button:active {
+  border-top-color: #808080;
+  border-left-color: #808080;
+  border-bottom-color: #ffffff;
+  border-right-color: #ffffff;
+}
+
+#taskbar-app-title {
+  flex-grow: 1;
+  font-size: 12px;
+  padding: 2px 8px;
+  margin: 2px 5px;
+  border: 1px inset #b0b0b0;
+  background-color: #c0c0c0;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 100px;
+}
+
+#taskbar-clock {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px inset #b0b0b0;
+  background-color: #c0c0c0;
+  color: #1a1a1a;
+  margin-left: auto;
+}
+
+#start-menu {
+  position: fixed;
+  bottom: 30px;
+  left: 0;
+  background-color: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-right: 1px solid #808080;
+  border-bottom: 1px solid #808080;
+  box-shadow: 2px -2px 5px rgba(0, 0, 0, 0.2);
+  padding: 5px;
+  z-index: 1002;
+  min-width: 200px;
+}
+
+#start-menu button {
+  display: block;
+  width: calc(100% - 10px);
+  margin: 5px;
+  text-align: left;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+button {
+  background-color: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-bottom: 1px solid #808080;
+  border-right: 1px solid #808080;
+  padding: 8px 15px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #1a1a1a;
+  font-size: 14px;
+  margin: 8px 5px;
+  min-width: 200px;
+  text-align: center;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+button:hover {
+  background-color: #00ffcc;
+  color: #1a1a1a;
+  border-top-color: #66ffdd;
+  border-left-color: #66ffdd;
+  border-bottom-color: #009988;
+  border-right-color: #009988;
+}
+
+button:active {
+  border-top-color: #808080;
+  border-left-color: #808080;
+  border-bottom-color: #ffffff;
+  border-right-color: #ffffff;
+  background-color: #c0c0c0;
+}
+
+button[disabled],
+button[aria-disabled="true"] {
+  color: #808080;
+  border-top-color: #e0e0e0;
+  border-left-color: #e0e0e0;
+  border-bottom-color: #a0a0a0;
+  border-right-color: #a0a0a0;
+  background-color: #d4d0c8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+h1,
+h2,
+h3 {
+  color: #1a1a1a;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 750px;
+}
+
+.choices-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.choices-list button {
+  width: 100%;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.selected-codex-button {
+  border-left-width: 4px !important;
+  border-left-color: #00ffcc !important;
+  background-color: #e0e0e0 !important;
+  font-weight: bold;
+  color: #1a1a1a !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
