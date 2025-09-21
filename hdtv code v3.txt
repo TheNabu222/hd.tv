@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoAlexist Game Builder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/client": "https://esm.sh/react-dom@^19.1.0/client",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.7.0",
+    "lit/": "https://esm.sh/lit@^3.3.0/",
+    "lit": "https://esm.sh/lit@^3.3.0",
+    "marked": "https://esm.sh/marked@^16.0.0",
+    "highlight.js": "https://esm.sh/highlight.js@^11.11.1",
+    "marked-highlight": "https://esm.sh/marked-highlight@^2.2.2",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
+  }
+}
+</script>
+    <style>
+        @keyframes scanline {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100%; }
+        }
+
+        :root {
+            --font-family: 'Press Start 2P', cursive;
+            
+            /* Nabu (Default) Theme */
+            --bg-color: #0d0d1a;
+            --text-color: #00ffcc;
+            --primary-accent: #ff00ff;
+            --secondary-accent: #00ffcc;
+            --disabled-color: #555;
+            
+            --window-bg: rgba(18, 24, 36, 0.75);
+            --window-border: 2px solid var(--primary-accent);
+            --window-box-shadow: 0 0 10px rgba(255, 0, 255, 0.5), inset 0 0 8px rgba(255, 0, 255, 0.3);
+            --window-backdrop-filter: blur(4px);
+            
+            --window-title-bg: var(--primary-accent);
+            --window-title-text: var(--bg-color);
+            --window-title-text-shadow: none;
+
+            --button-bg: transparent;
+            --button-text: var(--secondary-accent);
+            --button-border: 2px solid var(--secondary-accent);
+            --button-radius: 0;
+            --button-shadow: none;
+            --button-hover-bg: var(--secondary-accent);
+            --button-hover-text: var(--bg-color);
+            --button-hover-shadow: none;
+            --button-active-transform: translateY(1px);
+
+            --text-shadow: 0 0 3px rgba(0, 255, 204, 0.7);
+            --header-text-shadow: 0 0 5px var(--primary-accent);
+            --header-border: 2px solid var(--primary-accent);
+
+            --background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.1) 1px, transparent 1px);
+            --background-size: 40px 40px;
+            --background-attachment: fixed;
+        }
+
+        /* --- HYENA DIVA THEME --- */
+        .theme-hd {
+            --bg-color: #2c003e; /* Dark Purple */
+            --text-color: #ffea00; /* Bright Yellow */
+            --primary-accent: #ff69b4; /* Hot Pink */
+            --secondary-accent: #ffea00; /* Bright Yellow */
+            --disabled-color: #7b5a83;
+
+            --window-bg: rgba(74, 20, 140, 0.75); /* Translucent Dark Purple */
+            --window-border: 2px solid var(--primary-accent);
+            --window-box-shadow: 0 0 10px rgba(255, 105, 180, 0.6), inset 0 0 8px rgba(255, 105, 180, 0.4);
+            
+            --window-title-bg: var(--primary-accent);
+            --window-title-text: #2c003e;
+
+            --button-text: var(--secondary-accent);
+            --button-border: 2px solid var(--secondary-accent);
+            --button-hover-bg: var(--secondary-accent);
+            --button-hover-text: var(--bg-color);
+
+            --text-shadow: 0 0 3px rgba(255, 234, 0, 0.7);
+            --header-text-shadow: 0 0 5px var(--primary-accent);
+            --header-border: 2px solid var(--primary-accent);
+            
+            --background-image: 
+                linear-gradient(rgba(255, 105, 180, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 105, 180, 0.15) 1px, transparent 1px);
+        }
+
+
+        /* --- SYPHER THEME --- */
+        .theme-sypher {
+            --bg-color: #020a02;
+            --text-color: #00ff41;
+            --primary-accent: #00ff41;
+            --secondary-accent: #00ff41;
+            --disabled-color: #333;
+
+            --window-bg: rgba(0, 20, 0, 0.85);
+            --window-border: 1px solid var(--primary-accent);
+            --window-box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
+            --window-backdrop-filter: blur(2px);
+            
+            --window-title-bg: transparent;
+            --window-title-text: var(--primary-accent);
+            --window-title-text-shadow: 0 0 5px var(--primary-accent);
+            
+            --button-bg: transparent;
+            --button-text: var(--primary-accent);
+            --button-border: 1px solid var(--primary-accent);
+            --button-hover-bg: var(--primary-accent);
+            --button-hover-text: var(--bg-color);
+
+            --text-shadow: 0 0 5px var(--text-color);
+            --header-text-shadow: 0 0 8px var(--primary-accent);
+            --header-border: 1px solid var(--primary-accent);
+            
+            --background-image: 
+                linear-gradient(rgba(0, 255, 65, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.2) 1px, transparent 1px);
+            --background-size: 30px 30px;
+            --background-attachment: fixed;
+        }
+        .theme-sypher .window { border-radius: 0; }
+        .theme-sypher .window-titlebar { border-bottom: 1px solid var(--primary-accent); }
+
+
+        /* --- RIZZLORD THEME --- */
+        .theme-rizzlord {
+            --bg-color: #2a2a2e; /* Drab dark grey */
+            --text-color: #b0b0b0; /* Light grey */
+            --primary-accent: #4a6a8a; /* Muted corporate blue */
+            --secondary-accent: #777; /* Another grey */
+            --disabled-color: #555;
+
+            --window-bg: rgba(60, 60, 65, 0.75); /* Darker grey, translucent */
+            --window-border: 2px solid var(--primary-accent);
+            --window-box-shadow: none;
+            --window-backdrop-filter: blur(2px);
+
+            --window-title-bg: var(--primary-accent);
+            --window-title-text: #ddd;
+            --window-title-text-shadow: none;
+
+            --button-bg: transparent;
+            --button-text: var(--primary-accent);
+            --button-border: 2px solid var(--primary-accent);
+            --button-hover-bg: var(--primary-accent);
+            --button-hover-text: #fff;
+            --button-active-transform: none;
+
+            --text-shadow: none;
+            --header-text-shadow: none;
+            --header-border: 1px solid var(--primary-accent);
+            
+            --background-image:
+                linear-gradient(rgba(128, 128, 128, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
+            --background-attachment: fixed;
+        }
+
+
+        /* --- BASE STYLES USING VARIABLES --- */
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+            background-image: var(--background-image);
+            background-size: var(--background-size);
+            background-attachment: var(--background-attachment);
+            text-shadow: var(--text-shadow);
+            transition: background-color 0.5s ease;
+        }
+
+        body::after {
+            content: ' ';
+            display: block;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            animation: scanline 8s linear infinite;
+            opacity: 0.5;
+        }
+        .theme-sypher body::after {
+            opacity: 0.25;
+        }
+        .theme-hd body::after, .theme-rizzlord body::after {
+            opacity: 0.15;
+        }
+
+
+        game-playground {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            padding: 2rem;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .window {
+            background: var(--window-bg);
+            border: var(--window-border);
+            box-shadow: var(--window-box-shadow);
+            backdrop-filter: var(--window-backdrop-filter);
+            -webkit-backdrop-filter: var(--window-backdrop-filter);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+            max-width: 90vw;
+            width: 100%;
+        }
+
+        .window-titlebar {
+            background: var(--window-title-bg);
+            color: var(--window-title-text);
+            text-shadow: var(--window-title-text-shadow);
+            padding: 6px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .window-titlebar .window-close-btn {
+            background: var(--bg-color);
+            color: var(--primary-accent);
+            border: 1px solid var(--primary-accent);
+            padding: 0;
+            margin: 0;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            cursor: pointer;
+            text-shadow: none;
+            box-shadow: none;
+        }
+        .window-titlebar .window-close-btn:hover {
+            background: #fff;
+        }
+
+
+        .window-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        button {
+            background: var(--button-bg);
+            border: var(--button-border);
+            border-radius: var(--button-radius);
+            color: var(--button-text);
+            box-shadow: var(--button-shadow);
+            padding: 10px 15px;
+            font-family: var(--font-family);
+            cursor: pointer;
+            font-size: 16px;
+            margin: 4px 0;
+            text-align: left;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.5;
+            text-shadow: inherit;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover, button:focus {
+            background: var(--button-hover-bg);
+            color: var(--button-hover-text);
+            box-shadow: var(--button-hover-shadow);
+            outline: none;
+            text-shadow: none;
+        }
+
+        button:active {
+           transform: var(--button-active-transform);
+        }
+
+        button[disabled], button[aria-disabled="true"] {
+            border-color: var(--disabled-color);
+            color: var(--disabled-color);
+            cursor: not-allowed;
+            text-shadow: none;
+            background: transparent;
+            opacity: 0.7;
+            box-shadow: none;
+        }
+        .theme-rizzlord button[disabled], .theme-rizzlord button[aria-disabled="true"] {
+            background: var(--window-bg);
+        }
+
+
+        h1, h2, h3 {
+            color: var(--primary-accent);
+            text-shadow: var(--header-text-shadow);
+            margin-top: 0;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: var(--header-border);
+            font-size: 20px;
+        }
+        h3 {
+            font-size: 18px;
+            border-bottom-width: 1px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+
+        /* Custom Scrollbar Styles */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-accent);
+            border: 2px solid var(--bg-color);
+        }
+        .theme-rizzlord ::-webkit-scrollbar-thumb {
+            background: var(--primary-accent);
+            border: 1px solid #fff;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-accent);
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Make sure textareas and inputs match */
+        textarea, input {
+              padding: 10px;
+              font-family: var(--font-family);
+              font-size: 16px;
+              border: var(--button-border);
+              background-color: rgba(0, 255, 204, 0.1);
+              resize: none;
+              color: var(--text-color);
+              text-shadow: inherit;
+        }
+        textarea::placeholder {
+              color: var(--text-color);
+              opacity: 0.5;
+        }
+
+        .theme-sypher textarea, .theme-sypher input {
+            background-color: rgba(0, 255, 65, 0.1);
+        }
+        .theme-rizzlord textarea, .theme-rizzlord input {
+            background-color: #fff;
+            border: 1px inset #808080;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="desktop-bg-container"></div>
+    <game-playground></game-playground>
+</body>
+</html>

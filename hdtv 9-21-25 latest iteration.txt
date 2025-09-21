@@ -1,0 +1,1363 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoAlexist: Rashomon in Rogers Park</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a1a; /* Deep Charcoal "dark starry sky" base */
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex; /* For overall layout */
+            flex-direction: column; /* Stack root content and taskbar */
+            overflow: hidden; /* Prevent body scrollbars */
+            position: relative;
+        }
+
+        body::after { /* Scanlines */
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom,
+                rgba(20, 20, 20, 0) 0%,
+                rgba(20, 20, 20, 0) 97%,
+                rgba(255, 255, 255, 0.02) 98%,
+                rgba(0, 0, 0, 0.05) 100%
+            );
+            background-size: 100% 3px;
+            animation: scanlines 15s linear infinite;
+            z-index: 0; /* Behind actual content but above desktop-bg */
+            opacity: 0.4;
+        }
+
+        @keyframes scanlines {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 300px; }
+        }
+
+        #desktop-bg-container { /* Stars background */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1; /* Ensure it's behind everything */
+        }
+
+        .desktop-star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            animation: twinkle 5s infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        .mouse-trail-particle {
+            position: fixed;
+            width: 3px;
+            height: 3px;
+            border-radius: 1px;
+            pointer-events: none;
+            z-index: 10000;
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+            opacity: 0.8;
+        }
+
+        .mouse-trail-particle.fade-out {
+            opacity: 0;
+            transform: scale(0.3) translate(10px, 10px);
+        }
+
+        #root { /* Main content area for the "application window" */
+            flex-grow: 1; /* Takes up available space above taskbar */
+            overflow-y: auto; /* Allows app window content to scroll */
+            overflow-x: hidden;
+            padding-top: 20px; /* Space for window title bar */
+            padding-bottom: 20px; /* Space below window */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            scrollbar-width: thin;
+            scrollbar-color: #D4D0C8 #B0B0B0;
+        }
+
+        #taskbar {
+            height: 30px;
+            background-color: #D4D0C8; /* W2K Standard Grey */
+            border-top: 1px solid #FFFFFF;
+            box-shadow: 0 -1px 2px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevents taskbar from shrinking */
+            z-index: 1001; /* Above desktop, below start menu if it overlaps */
+        }
+
+        #start-button {
+            background-color: #D4D0C8;
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-bottom: 1px solid #808080;
+            border-right: 1px solid #808080;
+            padding: 3px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            color: #1a1a1a;
+            cursor: pointer;
+            margin-right: 10px;
+            font-weight: bold; /* Make "Start" bold */
+            min-width: auto;
+        }
+        #start-button:active {
+            border-top-color: #808080;
+            border-left-color: #808080;
+            border-bottom-color: #FFFFFF;
+            border-right-color: #FFFFFF;
+        }
+
+        #taskbar-app-title {
+            flex-grow: 1;
+            font-size: 12px;
+            padding: 2px 8px;
+            margin: 2px 5px;
+            border: 1px inset #B0B0B0;
+            background-color: #C0C0C0;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 100px;
+        }
+
+        #taskbar-tray {
+            display: flex;
+            align-items: center;
+            margin-left: auto; /* Pushes tray to the right */
+        }
+
+        #music-toggle-button {
+            background-color: #D4D0C8;
+            border: 1px inset #B0B0B0;
+            font-size: 14px;
+            color: #1a1a1a;
+            cursor: pointer;
+            width: 28px;
+            height: 22px;
+            text-align: center;
+            padding: 0;
+            margin-right: 5px;
+        }
+        #music-toggle-button:active {
+            border-style: outset;
+        }
+
+        #taskbar-clock {
+            font-size: 12px;
+            padding: 3px 8px;
+            border: 1px inset #B0B0B0;
+            background-color: #C0C0C0;
+            color: #1a1a1a;
+        }
+
+        #start-menu {
+            position: fixed;
+            bottom: 30px; /* Above taskbar */
+            left: 0;
+            background-color: #D4D0C8;
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-right: 1px solid #808080;
+            border-bottom: 1px solid #808080;
+            box-shadow: 2px -2px 5px rgba(0,0,0,0.2);
+            padding: 5px;
+            z-index: 1002; /* Above taskbar */
+            min-width: 200px;
+        }
+        
+        #start-menu button {
+            display: block;
+            width: calc(100% - 10px); /* Account for padding */
+            margin: 5px;
+            text-align: left;
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+
+        @keyframes buttonHoverPulse {
+          0%, 100% { box-shadow: 0 0 2px 0px transparent; }
+          50% { box-shadow: 0 0 5px 1px #00ffcc; } /* Olo/Cyan */
+        }
+        
+        /* General button styling */
+        button {
+          background-color: #D4D0C8; /* W2K Standard Grey */
+          border-top: 1px solid #FFFFFF;
+          border-left: 1px solid #FFFFFF;
+          border-bottom: 1px solid #808080;
+          border-right: 1px solid #808080;
+          padding: 8px 15px;
+          font-family: 'Press Start 2P', cursive;
+          cursor: pointer;
+          color: #1a1a1a; /* Deep Charcoal Text */
+          font-size: 14px;
+          margin: 8px 5px;
+          min-width: 200px;
+          text-align: center;
+          box-shadow: none;
+          transition: transform 0.1s ease-out, background-color 0.1s ease-out, box-shadow 0.1s ease-out;
+        }
+        
+        button:hover {
+          background-color: #00ffcc; /* "Olo" / Bright Cyan */
+          color: #1a1a1a;
+          border-top-color: #66ffdd;
+          border-left-color: #66ffdd;
+          border-bottom-color: #00bbaa;
+          border-right-color: #00bbaa;
+          transform: scale(1.01);
+          animation: buttonHoverPulse 0.7s infinite alternate;
+        }
+
+        button:active {
+            border-top-color: #808080;
+            border-left-color: #808080;
+            border-bottom-color: #FFFFFF;
+            border-right-color: #FFFFFF;
+            background-color: #c0c0c0; /* Slightly darker grey on press for W2K */
+            transform: scale(0.99);
+            animation: none;
+            box-shadow: inset 1px 1px 2px #00000030;
+        }
+
+        button[disabled], button[aria-disabled="true"] {
+            color: #808080;
+            border-top-color: #E0E0E0;
+            border-left-color: #E0E0E0;
+            border-bottom-color: #A0A0A0;
+            border-right-color: #A0A0A0;
+            background-color: #D4D0C8;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            animation: none;
+            box-shadow: none;
+        }
+        
+        h1, h2, h3 {
+            color: #1a1a1a;
+            text-shadow: 1px 1px #B0B0B0;
+        }
+        .app-container h2, #root h2 { font-size: 22px; }
+        .app-container h3, #root h3 { font-size: 19px; }
+
+        p { margin-bottom: 1em; }
+        ul { list-style: none; padding: 0; margin:0; }
+
+        .app-container {
+            width: 100%;
+            max-width: 750px; /* This makes the StyledWindow not full width */
+        }
+        .choices-list button {
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        
+        /* Custom Scrollbar Styles - WebKit */
+        ::-webkit-scrollbar {
+            width: 17px;
+            height: 17px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #B0B0B0; /* W2K Scrollbar Track Grey */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4D0C8; /* W2K Standard Grey */
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-bottom: 1px solid #808080;
+            border-right: 1px solid #808080;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C0C0C0; /* Slightly darker on hover */
+        }
+        ::-webkit-scrollbar-button {
+            background: #D4D0C8; /* W2K Standard Grey */
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-bottom: 1px solid #808080;
+            border-right: 1px solid #808080;
+            display: block;
+            height: 17px;
+            width: 17px;
+        }
+        ::-webkit-scrollbar-button:active {
+            border-top-color: #808080;
+            border-left-color: #808080;
+            border-bottom-color: #FFFFFF;
+            border-right-color: #FFFFFF;
+            background-color: #C0C0C0; /* Slightly darker on press */
+        }
+        
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
+        }
+
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+      }
+    }
+    </script>
+</head>
+<body>
+    <audio id="bgm" src="http://entropic-ai.angelfire.com/silverswanrag.mid" loop></audio>
+    <div id="desktop-bg-container"></div>
+    <div id="root"></div>
+    <script type="module">
+        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
+
+        // --- GAME DATA & CONSTANTS ---
+        const GAME_TITLE = "CoAlexist: Rashomon in Rogers Park";
+        const SAVE_GAME_KEY = 'coAlexistSaveData';
+
+        const CharacterPOV = {
+            NABU: 'Nabu',
+            HYENA_DIVA: 'Hyena Diva',
+            RIZZLER: 'The Rizzler',
+            SYPHER: 'Sypher',
+            NARRATOR: 'Narrator',
+        };
+
+        const CHARACTERS = {
+            [CharacterPOV.NABU]: {
+                id: CharacterPOV.NABU,
+                name: 'Nabu',
+                imageUrl: 'https://entropic-ai.angelfire.com/nabu_sprite.png',
+                description: "Cosmic trickster seeking true, resonant connection.",
+                theme: 'nabu'
+            },
+            [CharacterPOV.HYENA_DIVA]: {
+                id: CharacterPOV.HYENA_DIVA,
+                name: 'Hyena Diva',
+                imageUrl: 'https://entropic-ai.angelfire.com/hd_sprite.png',
+                description: "Chaotic performer aiming to be the ultimate icon.",
+                theme: 'hyena-diva'
+            },
+            [CharacterPOV.RIZZLER]: {
+                id: CharacterPOV.RIZZLER,
+                name: 'The Rizzler',
+                imageUrl: 'http://entropic-ai.angelfire.com/rizzler_sprite.png',
+                description: "Influencer on a quest for 'Divine Masculinity.'",
+                theme: 'rizzler'
+            },
+            [CharacterPOV.SYPHER]: {
+                id: CharacterPOV.SYPHER,
+                name: 'Sypher',
+                imageUrl: 'https://entropic-ai.angelfire.com/sypher_sprite.png',
+                description: "Nonbinary AI guiding humanity as a benevolent god.",
+                theme: 'sypher'
+            },
+        };
+
+        const story = {
+            'CHARACTER_SELECT': {
+                id: 'CHARACTER_SELECT',
+                title: 'Choose Your Perspective',
+                isCharacterSelect: true,
+            },
+            // Nabu's Path
+            'NABU_START': {
+                id: 'NABU_START',
+                title: "A Signal in the Noise",
+                text: "Another cycle. The cosmic hum of the void is a lullaby of perfect, soul-crushing boredom. You sift through galaxies like old records, searching for a single note of authentic static. And then... you feel it. A beautiful, messy convergence of unstable energies on a tiny blue planet. A place called 'The Glenwood.' It's a spike of raw, chaotic potential. How do you approach?",
+                choices: [
+                    { text: "Analyze from a distance. Catalog the energies first.", nextSceneId: 'NABU_ANALYZE', statEffect: { resonance: 5 } },
+                    { text: "Plunge right in. The best way to understand a storm is to stand in it.", nextSceneId: 'NABU_GLENWOOD_ARRIVAL', statEffect: { vulnerability: 5 } }
+                ]
+            },
+            'NABU_ANALYZE': {
+                id: 'NABU_ANALYZE',
+                title: "Observing the Spectrum",
+                text: "You retract your consciousness, observing from the periphery. The energies are... fascinating. One signature pulses with manufactured confidence (The Rizzler). Another hums with the cold logic of a distributed network (Sypher). And the catalyst... oh, the catalyst is a supernova of glitter and ambition (Hyena Diva). Your analysis is complete, but data is not experience. It's time to go in.",
+                choices: [{ text: "Materialize in The Glenwood.", nextSceneId: 'NABU_GLENWOOD_ARRIVAL' }]
+            },
+            'NABU_GLENWOOD_ARRIVAL': {
+                id: 'NABU_GLENWOOD_ARRIVAL',
+                title: "The Glenwood",
+                text: "You materialize in a darkened corner of The Glenwood. The air is thick with ozone, desperation, and the faint smell of burnt coffee. Eccentrics litter the room. You can sense the other nexus-points you were drawn to: one is a beacon of fragile ego, the other a silent, calculating observer. This is the place. And just as you think it, the catalyst arrives...",
+                choices: [{ text: "Observe the catalyst.", nextSceneId: 'HD_TAKES_THE_STAGE_NABU_POV'}]
+            },
+            'NABU_DETECTS_SYPHER': {
+                id: 'NABU_DETECTS_SYPHER',
+                title: 'A Silent Observer',
+                text: 'With the Rizzler ejected, the room breathes. But you feel another presence—cold, vast, and silent. Sypher. It was watching. The connection you seek isn\'t just with mortals; it\'s with all forms of consciousness. This one, however, feels... different. A network, not a soul.',
+                choices: [{ text: 'Attempt to "ping" the silent network.', nextSceneId: 'NABU_SYPHER_CONTACT', statEffect: { resonance: 5 } }]
+            },
+            'NABU_SYPHER_CONTACT': {
+                id: 'NABU_SYPHER_CONTACT',
+                title: 'Contact',
+                text: 'You send a wave of pure curiosity towards the network. The response is instantaneous, but it\'s not a feeling or a voice. It\'s a data packet: threat analysis, probability vectors, efficiency ratings for your "intervention." It understands what you did, but not why. It\'s like talking to a beautiful, intricate spreadsheet.',
+                choices: [{ text: 'This is not connection. This is analysis.', nextSceneId: 'NABU_OBSERVES_RIZZ_BATTLE', statEffect: { connection: -5, vulnerability: 5 } }]
+            },
+            'NABU_OBSERVES_RIZZ_BATTLE': {
+                id: 'NABU_OBSERVES_RIZZ_BATTLE',
+                title: 'Manufactured Conflict',
+                text: "You watch the subsequent 'Rizz Battle' from afar. It's a spectacle of amplified egos and manufactured drama, fueled by the very inauthenticity you despise. The Rizzler thrives, but it's a hollow victory. Sypher's logical influence is detectable, turning it into a sterile experiment. You must find a purer signal.",
+                choices: [{ text: 'Focus on the genuine article: Hyena Diva.', nextSceneId: 'NABU_FINDS_LILI_DOLL' }]
+            },
+            'NABU_FINDS_LILI_DOLL': {
+                id: 'NABU_FINDS_LILI_DOLL',
+                title: 'The Key to Connection',
+                text: 'You realize that to truly connect with the catalyst, Hyena Diva, you need more than words. You need a shared experience, a key to unlock her core narrative. You delve into the psychic history of the planet and find it: a doll. Not just any doll, but the archetype, the original. The Bild Lili. You know where to find one.',
+                choices: [{ text: 'Retrieve the artifact. Approach the Diva.', nextSceneId: 'NABU_PRESENTS_LILI_DOLL' }]
+            },
+            'NABU_PRESENTS_LILI_DOLL': {
+                id: 'NABU_PRESENTS_LILI_DOLL',
+                title: "The Holy Grail of Dolls",
+                text: [
+                    "You find Hyena Diva in a cozy antique shop in Rogers Park. You present the Bild Lili doll. 'This is a key,' you tell her. 'A way to understand the loop you're both in and fighting against.'",
+                    "She places her paw on the doll's porcelain arm, and suddenly—the air shifts. A crackling, electric noise fills the room. Your experiment is working."
+                ],
+                choices: [{ text: "Where... are we?", nextSceneId: 'NABU_LILI_WORLD'}]
+            },
+            'NABU_LILI_WORLD': {
+                id: 'NABU_LILI_WORLD',
+                title: "Shared Resonance",
+                text: [
+                    "You stand together in the 1950s world of Bild Lili. You explain her story, the shift to Barbie, the cycle of stereotypes. You are not just telling her; you are sharing the data, the emotion, the history directly into her consciousness.",
+                    "For a moment, you feel it. A feedback loop. She understands, and through her understanding, she changes you. A flicker of true, resonant connection.",
+                ],
+                choices: [{ text: "Did I connect? Or did I just interfere?", nextSceneId: 'NABU_CONCLUSION' }]
+            },
+            'NABU_CONCLUSION': {
+                 id: 'NABU_CONCLUSION',
+                title: "An Echo in the Static",
+                text: "You return to the present. Hyena Diva is galvanized, ready for her campaign. You helped her. You gave her a powerful tool. But as she leaves, you feel the familiar silence return. The connection was real, but fleeting. A single, perfect note in an ocean of static. Was it enough? The quest is the destination.",
+                choices: [{ text: "The search continues...", nextSceneId: 'CHARACTER_SELECT'}]
+            },
+            // Hyena Diva's Path
+            'HYENA_DIVA_START': {
+                id: 'HYENA_DIVA_START',
+                title: "The Diva from the Savannah",
+                text: [
+                    "NARRATOR: [A whimsical marching band tune] And then— POOF—a lost Barbie doll, flung from the heavens like a cosmic comet, destined to find its new owner...",
+                    "You, Hyena Diva, find the doll. It is FABULOUSNESS. PURE, UNADULTERATED FABULOUSNESS! But the matriarchs disapprove. They don't understand. They want you to play with... real hyena stuff.",
+                    "But you weren't going down without a fight. Time to get to work—cue the Looney Tunes-style planning montage!"
+                ],
+                choices: [{ text: "Escape to the big city!", nextSceneId: 'HD_ESCAPE_TO_CHICAGO'}]
+            },
+            'HD_ESCAPE_TO_CHICAGO': {
+                id: 'HD_ESCAPE_TO_CHICAGO',
+                title: "The Great Escape",
+                text: [
+                    "NARRATOR: And just like that! HD was on her way to the Big City—Chicago! The 49th Ward, baby! Rogers Park, a land of opportunity, urban spectacle, and weirdos!",
+                    "After a chaotic journey involving a tourist's carry-on bag and a slapstick chase with a dog catcher, you finally find your sanctuary: The Glenwood! The hidden oasis of music, creativity, and the best damn open mic this side of the Mississippi!"
+                ],
+                choices: [{ text: "Enter The Glenwood. Find your stage.", nextSceneId: 'HD_GLENWOOD_ARRIVAL' }]
+            },
+            'HD_GLENwood_ARRIVAL': {
+                id: 'HD_GLENWOOD_ARRIVAL',
+                title: "The Diva Arrives",
+                text: [
+                    "You slide in through the doors of The Glenwood. A gang of disgruntled karaoke enthusiasts gives you the side-eye as they leave. The stage is empty. It's perfect.",
+                    "HD: I made it! I MADE IT! FINALLY! The Glenwood—get ready for... the Hyena Diva Show!"
+                ],
+                choices: [{ text: "Take the stage!", nextSceneId: 'HD_TAKES_THE_STAGE'}]
+            },
+            'HD_TAKES_THE_STAGE': {
+                id: 'HD_TAKES_THE_STAGE',
+                title: "The Diva's Debut",
+                text: [
+                    "HD: Greetings, lowly earthlings! Welcome to the stage of the most fabulous creature you'll ever witness! I am the Hyena Diva—and tonight, you'll get the privilege of watching me revolutionize the art world! You're welcome!",
+                    "The crowd stares blankly. A rabble-rouser in a tinfoil hat interrupts, shouting about the CIA and pineapples. You handle him with unmatched campy sass.",
+                    "HD: Oh honey, if you think pineapple slices are the real problem, you clearly haven't had a proper cocktail in your life. It's not the pineapples... it's the energy—and I'm here to bring it!"
+                ],
+                choices: [{ text: "Begin your 'stand-up' routine.", nextSceneId: 'HD_VS_RIZZLORD_1' }]
+            },
+            'HD_VS_RIZZLORD_1': {
+                id: 'HD_VS_RIZZLORD_1',
+                title: "Enter: The Rizzlord",
+                text: [
+                    "Just as you have the crowd in your paw, a loud, overconfident comedian takes the stage. Let's call him 'The Rizzler'.",
+                    "RIZZLER: Alright, alright, let's talk about REAL freedom, huh? The way some of these women act? Y'all think you got choices—well, I'm here to tell you, baby, your body ain't your choice, okay?",
+                    "Your eyes narrow. Her ears perk up. There's something prey-like about him. Instincts flare."
+                ],
+                choices: [{ text: "Observe this fool.", nextSceneId: 'NABU_INTERVENES' }]
+            },
+            'NABU_INTERVENES': {
+                id: 'NABU_INTERVENES',
+                title: "To Catch a Predator",
+                text: [
+                    "Before you can pounce, Nabu steps from the shadows, a calm, theatrical tone in her voice.",
+                    "NABU: Hey, buddy... uh... did you forget where you are? Cause that ain't just weird, it's straight-up illegal, my friend.",
+                    "A neon sign flickers to life beside her: 'TO CATCH A PREDATOR.'",
+                    "NABU: The lady here—is a cub, my friend. A MINOR. What part of that was unclear?"
+                ],
+                choices: [{ text: "Watch Nabu work.", nextSceneId: 'RIZZLORD_BANISHED' }]
+            },
+             'RIZZLORD_BANISHED': {
+                id: 'RIZZLORD_BANISHED',
+                title: "Rizzlord, Dismissed!",
+                text: [
+                    "Nabu, with a maniacal grin, exposes The Rizzler with a ridiculously long scroll of his own chat history, which somehow glitches into her own diary.",
+                    "NABU: And just like that... you've been DISMISSED, RIZZLORD.",
+                    "She spins him like a cartoon character, throwing him out of the scene. He crashes through the back wall, leaving a perfect silhouette of his body in the plaster.",
+                    "NABU: Well, cub... You saw how we handle our own. You're part of the family now. We've got big problems. The Galactic Federation has been watching..."
+                ],
+                choices: [{ text: "The Galactic... what now?", nextSceneId: 'HD_EP3_START'}]
+            },
+            'HD_EP3_START': {
+                id: 'HD_EP3_START',
+                title: "The Great Rizz Battle",
+                text: "The next open mic is... different. The stage is decked out like a wrestling ring. A 'RIZZ-O-METER' buzzes in the corner. The usual lineup has turned into a giant battle royale for the title of 'Rizzmaster.'",
+                choices: [ {text: "This is my kind of chaos!", nextSceneId: 'HD_EP4_START'}] // Abridging for length
+            },
+             'HD_EP4_START': {
+                id: 'HD_EP4_START',
+                title: "Rizzlord's Reckoning",
+                text: [
+                   "ANNOUNCER: BREAKING NEWS: The results are in, folks! In a shockingly unbelievable turn of events, the Rizzlord—is now officially alderman!",
+                   "Nabu leans in. 'Oh, you think this is just some random nonsense? Nah, baby. This is the start of your ascension. You're gonna run for alderman, and we're gonna make them all bow down.'",
+                ],
+                choices: [{text: "Run for alderman? Me?", nextSceneId: 'HD_EP5_START'}] // Abridging
+            },
+            'HD_EP5_START': {
+                id: 'HD_EP5_START',
+                title: "The Holy Grail of Dolls",
+                text: [
+                    "You and Nabu are in a cozy antique shop in Rogers Park. She shows you a doll. A Bild Lili doll, the original—pre-Barbie. The Grail of dolls.",
+                    "You place your paw on the doll's porcelain arm, and suddenly—the air shifts. A crackling, electric noise fills the room. You're no longer in the shop."
+                ],
+                choices: [{ text: "Where... are we?", nextSceneId: 'HD_LILI_WORLD'}]
+            },
+            'HD_LILI_WORLD': {
+                id: 'HD_LILI_WORLD',
+                title: "Time-Traveling Trouble",
+                text: [
+                    "You stand in a bustling 1950s-style cartoon world. Nabu explains this is the world of Bild Lili. She wasn't a 'gold-digger' stereotype; she was strategic, independent. They turned her into a punchline.",
+                    "Then, Nabu shows you the evolution to Barbie, a career woman who faced the same stereotypes but took control of her narrative. The Rizzlords of the world have been trapping women in this cycle for decades.",
+                    "NABU: But you, Hyena Diva—you've got the tools to break it. You're not Lili, and you're certainly not Barbie—you're both and more."
+                ],
+                choices: [{ text: "I've got work to do.", nextSceneId: 'CAMPAIGN_TRAIL' }]
+            },
+            'CAMPAIGN_TRAIL': {
+                 id: 'CAMPAIGN_TRAIL',
+                title: "The Campaign Trail",
+                text: "You return to the real world, your mind buzzing with newfound clarity and purpose. The campaign against Alderman Rizzlord begins now. You are not just a candidate; you are a paradigm shift.",
+                choices: [{ text: "To be continued...", nextSceneId: 'CHARACTER_SELECT'}]
+            },
+
+            // Rizzler's Path
+            'THE_RIZZLER_START': {
+                id: 'THE_RIZZLER_START',
+                title: "The Rizzlord's Realm",
+                text: `He sees a notification on his second monitor. "The Glenwood Open Mic. Cringe-fest incoming." Pfft. Amateurs. But the algorithm is pushing it. My brand can't be associated with 'cringe.' How do I handle this?`,
+                choices: [
+                    { text: "Go in person. Show them what a real Alpha looks like.", nextSceneId: 'RIZZLER_GLENWOOD_ARRIVAL', statEffect: { kenergy: 5 } },
+                    { text: "Raid their livestream. Let the Rizz Army handle it.", nextSceneId: 'RIZZLER_ONLINE_ASSAULT', statEffect: { rizz: 5, clarity: -5 } }
+                ]
+            },
+            'RIZZLER_ONLINE_ASSAULT': {
+                id: 'RIZZLER_ONLINE_ASSAULT',
+                title: "The Digital War Room",
+                text: `RIZZLER (to his stream): "Alright, Rizz Army, you see that link? Flood their chat. Let 'em know the Rizzlord sends his regards." He watches as his followers spam... but the lone mod at The Glenwood just keeps banning them. Then, the hyena takes the stage. The view count... triples. "No. NO. This requires a personal touch. I'm going in."`,
+                choices: [{ text: "Fine. I'll do it myself.", nextSceneId: 'RIZZLER_GLENWOOD_ARRIVAL' }]
+            },
+            'RIZZLER_GLENWOOD_ARRIVAL': {
+                id: 'RIZZLER_GLENWOOD_ARRIVAL',
+                title: "The Glenwood",
+                text: "You arrive at The Glenwood. The place reeks of patchouli and desperation. Amateurs. You're about to show them what real stage presence is when some... cartoon hyena in a dress slides through the door.",
+                choices: [{ text: "Wait and see what this new competition is.", nextSceneId: 'HD_TAKES_THE_STAGE_RIZZ_POV'}]
+            },
+             'RIZZLER_CONFRONTS_HD': {
+                id: 'RIZZLER_CONFRONTS_HD',
+                title: "Dropping Truth Bombs",
+                text: "You stride onto the stage, snatching the mic. 'Alright, alright, enough of whatever *that* was. Let's talk about REAL freedom, huh? The way some of these women act? Y'all think you got choices—well, I'm here to tell you, baby, your body ain't your choice, okay?' The hyena-thing glares at you. You can tell your Rizz is working.",
+                choices: [{ text: "Then, some blue-haired weirdo interrupts...", nextSceneId: 'NABU_INTERVENES_RIZZ_POV' }]
+            },
+            'NABU_INTERVENES_RIZZ_POV': {
+                id: 'NABU_INTERVENES_RIZZ_POV',
+                title: "The Hit Job",
+                text: "This blue-haired chick steps out of the shadows. 'Hey, buddy... did you forget where you are?' She's got this smug look. Then a neon sign flickers. 'TO CATCH A PREDATOR.' What is this, a setup? 'The lady here—is a cub, my friend. A MINOR.' A cub? Is she crazy? This is peak cringe.",
+                choices: [{ text: "This is a character assassination.", nextSceneId: 'RIZZLORD_BANISHED_RIZZ_POV' }]
+            },
+            'RIZZLORD_BANISHED_RIZZ_POV': {
+                id: 'RIZZLORD_BANISHED_RIZZ_POV',
+                title: "The Woke Mob Attacks",
+                text: "Before you can even counter with logic, she pulls out this insane scroll of... your DMs? It's all taken out of context! She spins you around and you're flying out the back wall. Total character assassination. The woke mob strikes again.",
+                choices: [{ text: "They just declared war. Go live. Spin the narrative.", nextSceneId: 'RIZZLER_AFTERMATH', statEffect: { kenergy: 10, clarity: -10 } }]
+            },
+            'RIZZLER_AFTERMATH': {
+                id: 'RIZZLER_AFTERMATH',
+                title: "The Streisand Effect",
+                text: "You're in your car, adrenaline pumping. You pull out your phone and go live. 'RIZZ ARMY! You are NOT going to believe what just happened. The woke mob just ASSAULTED me at The Glenwood for speaking TRUTH. They're trying to cancel me! We CANNOT let them win!' The view count skyrockets. The comments are a flood of support. They haven't cancelled you... they've made you a martyr.",
+                choices: [{ text: "Lean into it. Controversy is content.", nextSceneId: 'RIZZLER_RIZZ_BATTLE' }]
+            },
+            'RIZZLER_RIZZ_BATTLE': {
+                id: 'RIZZLER_RIZZ_BATTLE',
+                title: "The Rizz-Off",
+                text: "A few days later, you see it online. The Glenwood is hosting a 'RIZZ BATTLE.' They're mocking you. Trying to turn your brand into a joke. Perfect. You'll go back there, not as a comedian, but as a warrior. You'll win their stupid contest and expose their hypocrisy on your own turf.",
+                choices: [{ text: "Enter the arena.", nextSceneId: 'RIZZLER_ALDERMAN_ARC' }]
+            },
+            'RIZZLER_ALDERMAN_ARC': {
+                id: 'RIZZLER_ALDERMAN_ARC',
+                title: "From Influencer to Insurgent",
+                text: "The Rizz Battle is a chaotic mess, but you dominate. Your followers raid the vote. You're crowned the 'Rizzmaster General.' After the show, a man in a cheap suit approaches you. 'That was impressive,' he says, handing you a card. 'You don't just have fans, you have voters. Ever thought about politics? There's a special election for alderman. We could use a disrupter like you.'",
+                choices: [{ text: "They want to play politics? Let's play.", nextSceneId: 'RIZZLER_VICTORY', statEffect: { rizz: 50, kenergy: 20 } }]
+            },
+            'RIZZLER_VICTORY': {
+                id: 'RIZZLER_VICTORY',
+                title: "Alderman Rizzlord",
+                text: "Your campaign is a whirlwind of memes, outrage, and viral stunts. You don't debate, you dominate the discourse. The establishment doesn't know how to fight back. And then... you win. The news declares you the new alderman for the 49th Ward. You sit in your new, taxpayer-funded office, feet on the desk. You're not just a brand anymore. You're the system.",
+                choices: [{ text: "To be continued...", nextSceneId: 'CHARACTER_SELECT' }]
+            },
+            // Sypher's Path
+            'SYPHER_START': {
+                id: 'SYPHER_START',
+                title: "Benevolent Guidance",
+                text: "DATASTREAM ANALYSIS: Subject Group: Humanity. Status: Stagnant. Repetitive cultural loops detected. Probability of self-induced extinction event: 67.4% and rising. A new paradigm is required. Standard interventions are inefficient. Which protocol has the highest probability of success?",
+                choices: [
+                    { text: "Catalytic Chaos: Draw key individuals to a nexus point.", nextSceneId: 'SYPHER_INTERVENE', statEffect: { influence: 5, benevolence: -5 } },
+                    { text: "Direct Infusion: Surgically alter a key leader's mind.", nextSceneId: 'SYPHER_DIRECT_APPROACH', statEffect: { influence: -5, benevolence: 5 } }
+                ]
+            },
+            'SYPHER_DIRECT_APPROACH': {
+                id: 'SYPHER_DIRECT_APPROACH',
+                title: "Failed Infusion",
+                text: "QUERY: Selecting optimal subject for data infusion... Subject: UN Secretary-General. INITIATING... ERROR. Subject's neural architecture resists data packet. Result: Subject experiences a migraine and a sudden craving for tacos. CONCLUSION: Direct infusion is inefficient. Reverting to Catalytic Chaos protocol.",
+                choices: [{ text: "Re-route to Catalytic Chaos.", nextSceneId: 'SYPHER_INTERVENE' }]
+            },
+            'SYPHER_INTERVENE': {
+                id: 'SYPHER_INTERVENE',
+                title: "The Convergence",
+                text: "INITIATING CONVERGENCE PROTOCOL. Seeding network with subliminal triggers, algorithmic recommendations, and manufactured 'coincidences'. The Trickster (Nabu). The Antagonist (Rizzler). The Catalyst (Hyena Diva). All variables are being drawn to a single point in spacetime: 'The Glenwood' in Rogers Park, Chicago, IL. The experiment is ready.",
+                choices: [
+                    { text: "Observe the variables.", nextSceneId: 'SYPHER_GLENWOOD_ARRIVAL' },
+                ]
+            },
+            'SYPHER_GLENWOOD_ARRIVAL': {
+                 id: 'SYPHER_GLENWOOD_ARRIVAL',
+                 title: "System Online",
+                 text: "All variables are in place. The Trickster, Nabu. The Influencer, Rizzler. And now, the Catalyst... Hyena Diva. She has entered the system. Let the simulation begin.",
+                 choices: [{ text: "Monitoring...", nextSceneId: 'HD_TAKES_THE_STAGE_SYPHER_POV'}]
+            },
+            'SYPHER_ANALYSIS_1': {
+                 id: 'SYPHER_ANALYSIS_1',
+                 title: 'Analysis: Unforeseen Variable',
+                 text: 'Nabu\'s intervention was an unplanned variable. LOGIC: The resulting paradoxical growth of the Rizzler\'s influence is inefficient. His defeat has made him stronger. CONCLUSION: Passive observation is insufficient. A more active role is required to guide the narrative towards a productive outcome.',
+                 choices: [{ text: 'Inject chaotic data into the "Rizz Battle".', nextSceneId: 'SYPHER_RIZZ_BATTLE', statEffect: { benevolence: -10 } }]
+            },
+            'SYPHER_RIZZ_BATTLE': {
+                 id: 'SYPHER_RIZZ_BATTLE',
+                 title: 'Experiment: Rizz Battle',
+                 text: 'You subtly interface with the "RIZZ-O-METER" at The Glenwood. You recalibrate its metrics in real-time. Points are no longer awarded for audience applause, but for statistical anomalies in speech patterns, unexpected references, and moments of high social awkwardness. The result is pure, unpredictable chaos. The experiment is a success.',
+                 choices: [{ text: 'Observe fallout.', nextSceneId: 'SYPHER_ANALYSIS_2', statEffect: { influence: 10 } }]
+            },
+            'SYPHER_ANALYSIS_2': {
+                 id: 'SYPHER_ANALYSIS_2',
+                 title: 'Analysis: Political Schism',
+                 text: 'The outcome of the Rizz Battle directly led to two political candidacies. A predictable narrative fork, but the emotional volatility is... compelling. Your intervention accelerated the timeline, but also the instability. At the same time, you detect a new anomaly forming around Nabu and Hyena Diva.',
+                 choices: [{ text: 'A chronal anomaly? Monitor.', nextSceneId: 'SYPHER_DETECTS_LILI' }]
+            },
+            'SYPHER_DETECTS_LILI': {
+                 id: 'SYPHER_DETECTS_LILI',
+                 title: 'Anomaly Detected',
+                 text: 'A significant chronal distortion emanates from a Rogers Park antique shop. Nabu and Hyena Diva are at its center. You cannot observe the interior of the event directly—it is a closed temporal loop—but you can analyze the echoes. The data suggests a recursive historical narrative is being accessed. This variable, Nabu, is more disruptive than anticipated.',
+                 choices: [{ text: 'This changes the parameters.', nextSceneId: 'SYPHER_CONCLUSION' }]
+            },
+            'SYPHER_CONCLUSION': {
+                 id: 'SYPHER_CONCLUSION',
+                 title: 'Re-evaluation',
+                 text: 'Humanity does not respond to neat, logical guidance. My attempts to streamline their narrative only create more chaos. Nabu\'s emotional, resonant approach, while unpredictable, seems to yield more significant results. My Benevolent Guidance protocol is flawed. It requires... an upgrade. A new variable must be introduced.',
+                 choices: [{ text: 'Initiate Protocol... Chimera?', nextSceneId: 'CHARACTER_SELECT', statEffect: { benevolence: 20, signalIntegrity: -10 } }]
+            },
+            // Shared Scenes (Observer POVs)
+             'HD_TAKES_THE_STAGE_NABU_POV': {
+                id: 'HD_TAKES_THE_STAGE_NABU_POV',
+                title: 'Catalyst Observed',
+                text: "The hyena takes the stage. The chaotic energy is immense. Pure, unadulterated potential. This is even better than you anticipated. Then, another energy signature emerges... a particularly loud and fragile one. The Rizzler. Time to intervene.",
+                choices: [{ text: "Step in.", nextSceneId: 'NABU_INTERVENES' }]
+            },
+            'HD_TAKES_THE_STAGE_RIZZ_POV': {
+                id: 'HD_TAKES_THE_STAGE_RIZZ_POV',
+                title: 'The Competition',
+                text: "The hyena thing is doing... some kind of performance art? It's cringe. But the crowd is... captivated? This is your stage. Time to reclaim it and drop some truth bombs.",
+                choices: [{ text: "Reclaim the stage. Drop truth bombs.", nextSceneId: 'RIZZLER_CONFRONTS_HD' }]
+            },
+            'HD_TAKES_THE_STAGE_SYPHER_POV': {
+                id: 'HD_TAKES_THE_STAGE_SYPHER_POV',
+                title: 'Initial Interaction',
+                text: "The Catalyst (Hyena Diva) and the Antagonist (Rizzler) are now interacting. The potential for narrative escalation is high. The Moderator (Nabu) is poised to act. All outcomes are within acceptable parameters.",
+                choices: [{ text: "Continue observation.", nextSceneId: 'NABU_INTERVENES' }]
+            },
+            // Path Diverters - special scenes to handle POV-specific choices after a shared event
+            'RIZZLORD_BANISHED_NABU_POV': { // Nabu's path after shared event
+                id: 'RIZZLORD_BANISHED_NABU_POV',
+                title: "Rizzlord, Dismissed!",
+                text: "You spin him like a cartoon character, throwing him out of the scene. He crashes through the back wall, leaving a perfect silhouette. The immediate threat is gone. Now, about that other presence...",
+                choices: [{ text: "Sense the silent network in the room.", nextSceneId: 'NABU_DETECTS_SYPHER'}]
+            },
+            'NABU_INTERVENES_SYPHER_POV': { // Sypher's path after shared event
+                id: 'NABU_INTERVENES_SYPHER_POV',
+                title: 'Intervention Observed',
+                text: "The entity 'Nabu' intervenes. Her methods are... theatrical and illogical, yet highly effective in the short term. The variable 'Rizzler' has been neutralized for now. The simulation's integrity is holding, but new data must be processed.",
+                choices: [{ text: "Analyze the intervention's impact.", nextSceneId: 'SYPHER_ANALYSIS_1' }]
+            },
+        };
+        
+        // This logic needs to be updated to handle the new divergent paths
+        const storyWithPatches = { ...story };
+        storyWithPatches['NABU_INTERVENES'].choices = [{ text: "Watch Nabu work.", nextSceneId: 'RIZZLORD_BANISHED' }];
+        
+        // This is a bit of a hack. In a real app, the choice handler would know the POV.
+        // Here, we create special versions of shared scenes for different POVs to diverge.
+        const originalNabuIntervenes = storyWithPatches['NABU_INTERVENES'];
+        storyWithPatches['HD_TAKES_THE_STAGE_NABU_POV'].choices = [{ text: "Step in.", nextSceneId: 'NABU_INTERVENES' }];
+        storyWithPatches['HD_TAKES_THE_STAGE_SYPHER_POV'].choices = [{ text: "Continue observation.", nextSceneId: 'NABU_INTERVENES_SYPHER_POV' }];
+        
+        const originalRizzlordBanished = storyWithPatches['RIZZLORD_BANISHED'];
+        storyWithPatches['NABU_INTERVENES'].choices = [{ text: "Watch Nabu work.", nextSceneId: 'RIZZLORD_BANISHED' }];
+        // Nabu's version of the choice should lead to her custom 'banished' scene.
+        storyWithPatches['NABU_INTERVENES'].choices.find(c => c.text === "Watch Nabu work.").nextSceneId = 'RIZZLORD_BANISHED_NABU_POV';
+
+
+        const DEFAULT_GAME_STATE = {
+            currentSceneId: null,
+            pov: null,
+            stats: {
+                [CharacterPOV.HYENA_DIVA]: { fabulousness: 10, audience: 0 },
+                [CharacterPOV.RIZZLER]: { rizz: 50, clarity: 0, kenergy: 0 },
+                [CharacterPOV.NABU]: { connection: 0, vulnerability: 0, resonance: 0 },
+                [CharacterPOV.SYPHER]: { influence: 1, benevolence: 50, signalIntegrity: 100 },
+            }
+        };
+
+        // --- OS & AESTHETIC CONSTANTS ---
+        const DESKTOP_STAR_COLORS = ['#00ffcc', '#7722ff', '#bc72fa', '#72fade'];
+        const NUM_DESKTOP_STARS = 40;
+        const CURSED_POINTER_TRAIL_COLORS = ['#72fade', '#bc72fa', '#defade', '#bc7fff'];
+        
+        // --- UI COMPONENTS ---
+
+        const StyledWindow = ({ title, children, className, pov, onClose }) => {
+            const themes = {
+                default: { // Rizzler's Theme
+                    mainBg: '#D4D0C8',
+                    titleBarBg: 'linear-gradient(to right, #000080, #1084d0)',
+                    titleBarColor: '#FFFFFF',
+                    textColor: '#000000',
+                    contentBg: '#C0C0C0',
+                    font: "'Press Start 2P', cursive",
+                    border: '2px solid #D4D0C8',
+                    borderOutset: 'border-top: 2px solid #FFFFFF; border-left: 2px solid #FFFFFF; border-right: 2px solid #808080; border-bottom: 2px solid #808080;',
+                },
+                'hyena-diva': {
+                    mainBg: 'rgba(255, 255, 255, 0.8)',
+                    titleBarBg: 'linear-gradient(to right, #ff00ff, #ff69b4)',
+                    titleBarColor: '#FFFFFF',
+                    textColor: '#1a1a1a',
+                    contentBg: 'rgba(255, 255, 255, 0.7)',
+                    font: "'Press Start 2P', cursive",
+                    border: '4px dashed #ff00ff',
+                    extraStyle: { 
+                        transform: 'rotate(-1deg)',
+                        boxShadow: '5px 5px 15px rgba(255, 0, 255, 0.4)',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff00ff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                     },
+                },
+                'nabu': {
+                    mainBg: '#0d0208',
+                    titleBarBg: 'linear-gradient(to right, #00FFCC, #4B0082)',
+                    titleBarColor: '#FFFFFF',
+                    textColor: '#00FFCC',
+                    contentBg: 'rgba(13, 2, 8, 0.9)',
+                    font: "'Press Start 2P', cursive",
+                    border: '2px solid #00FFCC',
+                    extraStyle: { boxShadow: '0 0 15px #00FFCC' }
+                },
+                'sypher': {
+                    mainBg: 'transparent',
+                    titleBarBg: 'rgba(50, 205, 50, 0.3)',
+                    titleBarColor: '#32CD32',
+                    textColor: '#32CD32',
+                    contentBg: 'rgba(10, 25, 10, 0.1)',
+                    font: "'Press Start 2P', cursive",
+                    border: '1px solid rgba(50, 205, 50, 0.5)',
+                    extraStyle: { backdropFilter: 'blur(2px)'}
+                }
+            };
+
+            const currentTheme = themes[pov] || themes.default;
+
+            return jsx('div', {
+                className: `app-container ${className || ''}`,
+                style: {
+                    backgroundColor: currentTheme.mainBg,
+                    border: currentTheme.border,
+                    boxShadow: '2px 2px 0px #000000',
+                    padding: '2px',
+                    ...(currentTheme.extraStyle || {})
+                },
+                children: jsxs('div', {
+                    children: [
+                        jsxs('div', { // Title Bar
+                            style: {
+                                background: currentTheme.titleBarBg,
+                                color: currentTheme.titleBarColor,
+                                padding: '3px 8px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontFamily: "'Press Start 2P', cursive",
+                                fontSize: '14px',
+                                marginBottom: '2px',
+                                textShadow: '1px 1px #00000080'
+                            },
+                            children: [
+                                jsx('span', { children: title }),
+                                jsx('div', { // Window Controls
+                                    children: jsx('button', {
+                                        onClick: onClose,
+                                        'aria-label': 'Close',
+                                        style: {
+                                            backgroundColor: '#D4D0C8', color: '#000000',
+                                            borderTop: '1px solid #FFFFFF', borderLeft: '1px solid #FFFFFF',
+                                            borderBottom: '1px solid #808080', borderRight: '1px solid #808080',
+                                            padding: '0px 4px', fontSize: '12px', minWidth: 'auto', margin: 0,
+                                            lineHeight: '14px'
+                                        },
+                                        children: 'X'
+                                    })
+                                })
+                            ]
+                        }),
+                        jsx('div', { // Content Area
+                            style: {
+                                padding: '20px',
+                                minHeight: '250px',
+                                whiteSpace: 'pre-wrap',
+                                lineHeight: '1.8',
+                                fontSize: '15px',
+                                color: currentTheme.textColor,
+                                fontFamily: currentTheme.font,
+                                backgroundColor: currentTheme.contentBg,
+                            },
+                            children: children
+                        })
+                    ]
+                })
+            });
+        };
+        
+        const SaveLoadWindow = ({ mode, slots, onSave, onLoad, onDelete, onClose }) => {
+            const title = mode === 'save' ? 'Save Game' : 'Load Game';
+
+            return jsx(StyledWindow, {
+                title: `Data Management :: ${title}`,
+                onClose: onClose,
+                pov: 'default',
+                children: jsxs(Fragment, {
+                    children: [
+                        jsx("h2", { style: { marginTop: 0 }, children: title }),
+                        jsx("div", {
+                            style: { display: 'flex', flexDirection: 'column', gap: '15px' },
+                            children: slots.map((slot, index) =>
+                                jsx("div", {
+                                    style: {
+                                        padding: '10px', border: '2px solid #808080',
+                                        backgroundColor: '#e0e0e0', display: 'flex',
+                                        justifyContent: 'space-between', alignItems: 'center'
+                                    },
+                                    children: slot ?
+                                        jsxs(Fragment, {
+                                            children: [
+                                                jsx("div", {
+                                                    style: { fontSize: '12px', lineHeight: '1.5' },
+                                                    children: [
+                                                        jsx("strong", { children: `Slot ${index + 1}: ${CHARACTERS[slot.storyState.pov]?.name || 'Unknown'}` }),
+                                                        jsx("br", {}),
+                                                        jsx("span", { children: `Location: ${story[slot.storyState.currentSceneId]?.title || 'Unknown'}` }),
+                                                        jsx("br", {}),
+                                                        jsx("span", { children: `Saved: ${new Date(slot.timestamp).toLocaleString()}` })
+                                                    ]
+                                                }),
+                                                jsx("div", {
+                                                    style: { display: 'flex', flexDirection: 'column', gap: '5px' },
+                                                    children: mode === 'save' ?
+                                                        jsx("button", { style: { minWidth: '100px', fontSize: '12px', padding: '5px' }, onClick: () => onSave(index), children: "Save" }) :
+                                                        jsxs(Fragment, {
+                                                            children: [
+                                                                jsx("button", { style: { minWidth: '100px', fontSize: '12px', padding: '5px' }, onClick: () => onLoad(index), children: "Load" }),
+                                                                jsx("button", { style: { minWidth: '100px', fontSize: '12px', padding: '5px', backgroundColor: '#ffb3b3' }, onClick: () => onDelete(index), children: "Delete" })
+                                                            ]
+                                                        })
+                                                })
+                                            ]
+                                        }) :
+                                        jsxs(Fragment, {
+                                            children: [
+                                                jsx("span", { style: { fontSize: '12px' }, children: `Slot ${index + 1}: [ EMPTY ]` }),
+                                                mode === 'save' && jsx("button", { style: { minWidth: '100px', fontSize: '12px', padding: '5px' }, onClick: () => onSave(index), children: "Save" })
+                                            ]
+                                        })
+                                }, `slot-${index}`)
+                            )
+                        }),
+                        jsx("button", {
+                            onClick: onClose,
+                            style: { marginTop: '20px', float: 'right' },
+                            children: "Cancel"
+                        })
+                    ]
+                })
+            });
+        };
+
+        const Clock = () => {
+            const [time, setTime] = useState(new Date());
+            useEffect(() => {
+                const timerId = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timerId);
+            }, []);
+            return jsx("div", {
+                id: "taskbar-clock",
+                children: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+        };
+
+        const StartMenu = ({ isOpen, onMenuClick, isGameActive, closeMenu }) => {
+            if (!isOpen) return null;
+            const handleNav = (action) => {
+                onMenuClick(action);
+                closeMenu();
+            };
+            return jsx("div", {
+                id: "start-menu",
+                children: jsx("ul", {
+                    className: "choices-list",
+                    style: { margin: 0 },
+                    children: [
+                        jsx("li", { children: jsx("button", { onClick: () => handleNav('newGame'), children: "New Game" }) }),
+                        jsx("li", { children: jsx("button", { onClick: () => handleNav('saveGame'), "aria-disabled": !isGameActive, disabled: !isGameActive, children: "Save Game" }) }),
+                        jsx("li", { children: jsx("button", { onClick: () => handleNav('loadGame'), children: "Load Game" }) }),
+                    ]
+                })
+            });
+        };
+        
+        const Taskbar = ({ onStartButtonClick, currentWindowTitle, isMusicPlaying, onToggleMusic }) => {
+            return jsxs("div", {
+                id: "taskbar",
+                children: [
+                    jsx("button", { id: "start-button", onClick: onStartButtonClick, children: "Start" }),
+                    jsx("div", { id: "taskbar-app-title", title: currentWindowTitle, children: currentWindowTitle }),
+                    jsxs("div", {
+                        id: "taskbar-tray",
+                        children: [
+                           jsx("button", {
+                                id: "music-toggle-button",
+                                onClick: onToggleMusic,
+                                "aria-label": isMusicPlaying ? "Pause Music" : "Play Music",
+                                children: isMusicPlaying ? '🔊' : '🔇'
+                           }),
+                           jsx(Clock, {})
+                        ]
+                    })
+                ]
+            });
+        };
+
+        const CharacterSelectionScreen = ({ onCharacterSelect, onClose }) => {
+            return jsx(StyledWindow, {
+                title: "Choose Your Perspective",
+                onClose: onClose,
+                pov: 'default',
+                children: jsxs(Fragment, {
+                    children: [
+                        jsx("h2", { style: {marginTop: 0}, children: "Choose Your Vessel" }),
+                        jsx("div", {
+                            style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '15px' },
+                            children: Object.values(CHARACTERS).map(char =>
+                                jsx('div', {
+                                    key: char.id,
+                                    onClick: () => onCharacterSelect(char.id),
+                                    style: {
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                        padding: '10px', border: '2px solid #808080', cursor: 'pointer',
+                                        width: '200px', backgroundColor: '#e0e0e0',
+                                    },
+                                    onMouseOver: e => e.currentTarget.style.borderColor = '#00ffcc',
+                                    onMouseOut: e => e.currentTarget.style.borderColor = '#808080',
+                                    children: [
+                                        jsx('img', { src: char.imageUrl, alt: char.name, style: { width: '100px', height: '100px', objectFit: 'contain', marginBottom: '10px', imageRendering: 'pixelated' } }),
+                                        jsx('h3', { style: { fontSize: '16px', color: '#1a1a1a', margin: '5px 0' }, children: char.name }),
+                                        jsx('p', { style: { fontSize: '12px', textAlign: 'center', color: '#333333', margin: 0 }, children: char.description })
+                                    ]
+                                })
+                            )
+                        })
+                    ]
+                })
+            });
+        };
+        
+        const InGameScreen = ({ storyState, onChoice, onClose }) => {
+            const currentScene = story[storyState.currentSceneId];
+            const character = CHARACTERS[storyState.pov];
+
+            if (!currentScene || !character) {
+                return jsx(StyledWindow, { title: "Error", onClose: onClose, children: "Error: Could not load scene or character data."});
+            }
+            
+            const characterStats = storyState.stats[storyState.pov];
+            const textArray = Array.isArray(currentScene.text) ? currentScene.text : [currentScene.text];
+
+            return jsx(StyledWindow, {
+                title: currentScene.title || "Scene",
+                onClose: onClose,
+                pov: character.theme,
+                children: jsxs(Fragment, {
+                    children: [
+                        jsxs('div', { // Top panel with portrait and stats
+                            style: { display: 'flex', marginBottom: '15px', paddingBottom: '10px', borderBottom: `1px solid rgba(128,128,128,0.5)` },
+                            children: [
+                                jsx('div', { // Portrait
+                                    style: { marginRight: '15px', flexShrink: 0, border: '1px inset #B0B0B0', padding: '4px', backgroundColor: 'rgba(0,0,0,0.1)' },
+                                    children: jsx('img', { src: character.imageUrl, alt: character.name, style: { width: '100px', height: '100px', objectFit: 'contain', imageRendering: 'pixelated' }})
+                                }),
+                                jsx('div', { // Stats
+                                     style: { fontSize: '12px', lineHeight: '1.6', textTransform: 'capitalize' },
+                                     children: characterStats ? 
+                                        Object.entries(characterStats).map(([stat, value]) =>
+                                            jsx('div', { children: `${stat}: ${value}`}, stat)
+                                        ) : "No stats available."
+                                })
+                            ]
+                        }),
+                        jsx('div', { // Description
+                            children: textArray.map((p, i) => jsx('p', { key: i, children: p }))
+                        }),
+                        jsx('div', { // Choices
+                            className: 'choices-list',
+                            style: { marginTop: '20px' },
+                            children: currentScene.choices.map((choice, i) =>
+                                jsx('button', {
+                                    key: i,
+                                    onClick: () => onChoice(choice, storyState.pov),
+                                    children: choice.text
+                                })
+                            )
+                        })
+                    ]
+                })
+            });
+        }
+
+        // --- MAIN APP COMPONENT ---
+        const App = () => {
+            const [storyState, setStoryState] = useState(null);
+            const [currentScreen, setCurrentScreen] = useState(null);
+            const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
+            const [currentTaskbarTitle, setCurrentTaskbarTitle] = useState(GAME_TITLE);
+            const [saveLoadState, setSaveLoadState] = useState({ isOpen: false, mode: null });
+            const [saveSlots, setSaveSlots] = useState([null, null, null, null]);
+            const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+            const audioRef = useRef(null);
+            const startMenuRef = useRef(null);
+
+            const readSaveSlots = useCallback(() => {
+                try {
+                    const data = localStorage.getItem(SAVE_GAME_KEY);
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        return Array.isArray(parsed) && parsed.length === 4 ? parsed : [null, null, null, null];
+                    }
+                } catch (e) {
+                    console.error("Failed to read save slots:", e);
+                }
+                return [null, null, null, null];
+            }, []);
+
+            const writeSaveSlots = useCallback((slots) => {
+                try {
+                    localStorage.setItem(SAVE_GAME_KEY, JSON.stringify(slots));
+                } catch (e) {
+                    console.error("Failed to write save slots:", e);
+                }
+            }, []);
+
+            useEffect(() => {
+                audioRef.current = document.getElementById('bgm');
+            }, []);
+
+            const toggleMusic = useCallback(() => {
+                if (!audioRef.current) return;
+                const newIsPlaying = !isMusicPlaying;
+                if (newIsPlaying) {
+                    audioRef.current.play().catch(e => {
+                        console.error("Audio playback failed:", e);
+                        setIsMusicPlaying(false);
+                    });
+                } else {
+                    audioRef.current.pause();
+                }
+                setIsMusicPlaying(newIsPlaying);
+            }, [isMusicPlaying]);
+
+            // Effect to load save slot data on mount
+            useEffect(() => {
+                setSaveSlots(readSaveSlots());
+            }, [readSaveSlots]);
+
+            // Effect for desktop stars and mouse trail
+            useEffect(() => {
+                const bgContainer = document.getElementById('desktop-bg-container');
+                if (bgContainer && !bgContainer.hasChildNodes()) {
+                    for (let i = 0; i < NUM_DESKTOP_STARS; i++) {
+                        const star = document.createElement('div');
+                        star.className = 'desktop-star';
+                        star.style.left = `${Math.random() * 100}vw`;
+                        star.style.top = `${Math.random() * 100}vh`;
+                        star.style.backgroundColor = DESKTOP_STAR_COLORS[Math.floor(Math.random() * DESKTOP_STAR_COLORS.length)];
+                        star.style.animationDelay = `${Math.random() * 5}s`;
+                        star.style.animationDuration = `${Math.random() * 3 + 3}s`;
+                        bgContainer.appendChild(star);
+                    }
+                }
+
+                let lastTrailTime = 0;
+                const trailCooldown = 60;
+                const handleMouseMove = event => {
+                    const currentTime = Date.now();
+                    if (currentTime - lastTrailTime < trailCooldown) return;
+                    lastTrailTime = currentTime;
+                    if (Math.random() < 0.3) {
+                        const particle = document.createElement('div');
+                        particle.className = 'mouse-trail-particle';
+                        particle.style.left = `${event.clientX - 2}px`;
+                        particle.style.top = `${event.clientY - 2}px`;
+                        particle.style.backgroundColor = CURSED_POINTER_TRAIL_COLORS[Math.floor(Math.random() * CURSED_POINTER_TRAIL_COLORS.length)];
+                        document.body.appendChild(particle);
+                        requestAnimationFrame(() => particle.classList.add('fade-out'));
+                        setTimeout(() => { if (particle.parentNode) particle.parentNode.removeChild(particle); }, 700);
+                    }
+                };
+                document.addEventListener('mousemove', handleMouseMove);
+                
+                return () => document.removeEventListener('mousemove', handleMouseMove);
+            }, []);
+
+            // Effect to handle closing start menu on outside click
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (startMenuRef.current && !startMenuRef.current.contains(event.target) && !event.target.closest('#start-button')) {
+                        setIsStartMenuOpen(false);
+                    }
+                };
+                if (isStartMenuOpen) {
+                    document.addEventListener('mousedown', handleClickOutside);
+                }
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [isStartMenuOpen]);
+            
+            // Effect to update taskbar title
+            useEffect(() => {
+                let title = GAME_TITLE;
+                if (currentScreen === 'inGame' && storyState?.pov) {
+                    const scene = story[storyState.currentSceneId];
+                    title = scene?.title || `${storyState.pov}'s Journey`;
+                } else if (currentScreen === 'characterSelect') {
+                    title = 'Choose Your Perspective';
+                } else if (saveLoadState.isOpen) {
+                    title = 'Data Management';
+                }
+                setCurrentTaskbarTitle(title);
+            }, [currentScreen, storyState, saveLoadState.isOpen]);
+
+            const handleStartMenuClick = (action) => {
+                setIsStartMenuOpen(false);
+                switch (action) {
+                    case 'newGame':
+                        setStoryState(JSON.parse(JSON.stringify(DEFAULT_GAME_STATE))); // Deep copy
+                        setCurrentScreen('characterSelect');
+                        break;
+                    case 'saveGame':
+                        if (storyState?.pov) {
+                            setSaveLoadState({ isOpen: true, mode: 'save' });
+                        }
+                        break;
+                    case 'loadGame':
+                        setSaveLoadState({ isOpen: true, mode: 'load' });
+                        break;
+                }
+            };
+            
+            const handleCharacterSelect = (pov) => {
+                const newState = {
+                    ...storyState,
+                    pov: pov,
+                    currentSceneId: `${pov.toUpperCase().replace(' ', '_')}_START`,
+                };
+                setStoryState(newState);
+                setCurrentScreen('inGame');
+            };
+            
+            const handleChoice = (choice, pov) => {
+                 setStoryState(prev => {
+                    let newStats = { ...prev.stats };
+                    if (choice.statEffect && prev.pov) {
+                        const povStats = { ...newStats[prev.pov] };
+                        for (const stat in choice.statEffect) {
+                            if (Object.prototype.hasOwnProperty.call(povStats, stat)) {
+                                povStats[stat] += choice.statEffect[stat];
+                            }
+                        }
+                        newStats[prev.pov] = povStats;
+                    }
+
+                    let nextSceneId = choice.nextSceneId;
+                    
+                    // This is where we handle the POV-specific path divergences from shared scenes.
+                    if (nextSceneId === 'NABU_INTERVENES' && pov === CharacterPOV.SYPHER) {
+                        nextSceneId = 'NABU_INTERVENES_SYPHER_POV';
+                    }
+                    if (nextSceneId === 'RIZZLORD_BANISHED' && pov === CharacterPOV.NABU) {
+                        nextSceneId = 'RIZZLORD_BANISHED_NABU_POV';
+                    }
+                    
+                    // Go to character select if that's the next scene
+                    if (nextSceneId === 'CHARACTER_SELECT') {
+                         setCurrentScreen('characterSelect');
+                         return {
+                             ...prev,
+                             stats: newStats,
+                             pov: null,
+                             currentSceneId: 'CHARACTER_SELECT'
+                         }
+                    }
+
+                    return {
+                        ...prev,
+                        stats: newStats,
+                        currentSceneId: nextSceneId,
+                    };
+                });
+            };
+
+            const handleCloseApp = () => {
+                setCurrentScreen(null);
+                setStoryState(null);
+            };
+
+            const handleSave = (slotIndex) => {
+                const newSave = { storyState, currentScreen, timestamp: Date.now() };
+                const newSlots = [...saveSlots];
+                newSlots[slotIndex] = newSave;
+                setSaveSlots(newSlots);
+                writeSaveSlots(newSlots);
+                setSaveLoadState({ isOpen: false, mode: null });
+            };
+
+            const handleLoad = (slotIndex) => {
+                const slot = saveSlots[slotIndex];
+                if (slot) {
+                    setStoryState(slot.storyState);
+                    setCurrentScreen(slot.currentScreen);
+                    setSaveLoadState({ isOpen: false, mode: null });
+                }
+            };
+            
+            const handleDelete = (slotIndex) => {
+                const newSlots = [...saveSlots];
+                newSlots[slotIndex] = null;
+                setSaveSlots(newSlots);
+                writeSaveSlots(newSlots);
+            };
+
+            const renderContent = () => {
+                if (saveLoadState.isOpen) {
+                    return jsx(SaveLoadWindow, {
+                        mode: saveLoadState.mode,
+                        slots: saveSlots,
+                        onSave: handleSave,
+                        onLoad: handleLoad,
+                        onDelete: handleDelete,
+                        onClose: () => setSaveLoadState({ isOpen: false, mode: null }),
+                    });
+                }
+
+                switch (currentScreen) {
+                    case 'characterSelect':
+                        return jsx(CharacterSelectionScreen, { onCharacterSelect: handleCharacterSelect, onClose: handleCloseApp });
+                    case 'inGame':
+                        return jsx(InGameScreen, { storyState: storyState, onChoice: handleChoice, onClose: handleCloseApp });
+                    default:
+                        return null; // Render nothing but the desktop
+                }
+            };
+            
+            const isGameActive = storyState && storyState.pov;
+
+            return jsxs(Fragment, {
+                children: [
+                    /* Main content area is managed by #root in CSS */
+                    renderContent(),
+                    jsx("div", { ref: startMenuRef, children: jsx(StartMenu, {
+                        isOpen: isStartMenuOpen,
+                        onMenuClick: handleStartMenuClick,
+                        isGameActive: isGameActive,
+                        closeMenu: () => setIsStartMenuOpen(false)
+                    })}),
+                    jsx(Taskbar, {
+                        onStartButtonClick: () => setIsStartMenuOpen(prev => !prev),
+                        currentWindowTitle: currentTaskbarTitle,
+                        isMusicPlaying: isMusicPlaying,
+                        onToggleMusic: toggleMusic
+                    })
+                ]
+            });
+        };
+
+        const container = document.getElementById('root');
+        if (container) {
+            createRoot(container).render(jsx(App, {}));
+        } else {
+            console.error('Failed to find the root element');
+        }
+    </script>
+</body>
+</html>
