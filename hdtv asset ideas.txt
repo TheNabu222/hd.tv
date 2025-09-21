@@ -1,0 +1,62 @@
+Main Game View: This will be the top 80% of the screen where the scene backgrounds are displayed.
+Bottom UI Bar: A dedicated bar at the bottom of the screen.
+Character Stat Display: A small, themed area showing the current POV character's stats (e.g., a glittery meter for HD's "Fabulousness," a crackling energy bar for Rizzler's "Kenergy").
+Inventory Slots: A scrolling bar or a series of boxes to hold item icons like the Barbie Doll.
+Menu Button: A stylized gear or "Start" button that brings up the Save/Load/New Game menu.
+Dialogue Box: A classic dialogue box that appears at the bottom, featuring:
+Character Portrait Area: A space on the left for the speaking character's portrait.
+Text Area: A large area for the dialogue text.
+Choice Buttons: When a choice is presented, large, colorful, and satisfyingly clickable buttons will appear over the dialogue box.
+Custom Cursor: A unique cursor, perhaps a sparkling hyena paw print or a glitching cosmic symbol, that changes when hovering over interactive "hotspots."
+2. Character Assets
+These are the stars of the show. We need sprites for dialogue and for animating within the scenes.
+Dialogue Portraits: For each of the 4 main characters (HD, Nabu, Rizzler, Sypher), we need a set of high-resolution portraits showing different emotions:
+Neutral / Default
+Happy / Smug / Mischievous
+Angry / Determined
+Sad / Confused
+Shocked / Surprised
+In-Scene Sprites & Animations: Full-body, cartoon-style sprites for each character that can be placed in the scene backgrounds. These will need basic animations:
+Idle Animation: A simple breathing or shifting animation for when they're standing still.
+Walk Cycle: A looping animation for moving across the screen.
+Special Action Animations:
+HD: Striking a dramatic pose, pulling out her fake mustache, laughing (Hoo-hoo-HOO!).
+Nabu: A dramatic gesture for banishing Rizzlord, sipping from her cosmic drink.
+Rizzler: A "truth bomb" finger point, looking panicked, a "rizz" grin.
+Sypher: A shimmering/glitching effect to show its digital nature.
+3. Scene Backgrounds
+These are the static, hand-painted style backgrounds that define the world. Each one will be a screen the player can explore, with clickable hotspots.
+Masai Mara (Opening): The vibrant, whimsical scene from the first image. Hotspots could include the jeep, the lion, and the bushes.
+Tourist Camp: A messy picnic blanket scene where HD convinces the little girl to take her. Hotspots: the girl, the sandwich, the carry-on bag.
+Chicago Streets: A chaotic city street for the chase scene. Think exaggerated perspectives, food carts, and funny details in the background.
+The Glenwood (Main Hub): This is your "Moe's Tavern." It needs to feel both grimy and magical. We'll need a few views:
+Main Floor view (showing the stage, tables, and the bar).
+Backstage view (Nabu's mysterious lounge area).
+Rogers Park Antique Shop: A cozy, cluttered shop filled with curiosities. The central focus will be the glass display case with the Bild Lili doll.
+Bild Lili's Cartoon World: A surreal, black-and-white (with pops of color) world designed to look like a 1950s German comic strip.
+4. Item & Inventory Assets
+These are the objects the player can pick up and use. We'll need two versions: one for the in-scene world and a smaller icon for the inventory bar.
+The Barbie Doll: The catalyst for the whole story.
+The Bild Lili Doll: The "Holy Grail." It should look distinct and important.
+HD's Fake Mustache: A classic prop.
+Nabu's Cosmic Drink: A swirling, mysterious beverage in a strange chalice.
+The Tinfoil Hat: Worn by the rabble-rouser at The Glenwood.
+Rizzlord's Phone: His tool for going live and spinning the narrative.
+5. Special Cutscene & Event Assets
+These are full-screen images or special animated elements for key story beats that go beyond the normal gameplay view.
+"TO CATCH A PREDATOR" Neon Sign: A flickering, dramatic graphic.
+The "RIZZ-O-METER": A wacky, oversized contraption with bouncing needles and flashing lights.
+GFW Alert Graphic: A glitchy, futuristic pop-up that interrupts the screen.
+Barbie's Cosmic Hologram: An ethereal, glowing, full-screen image of Barbie delivering her message.
+The Rizzlord Alderman Poster: A cheesy, terribly designed political campaign poster.
+
+16-Bit Point & Click: The entire scene is rendered in classic pixel art, with careful dithering to create gradients and textures. The perspective is a static, wide shot, perfect for a point-and-click adventure game screen.
+GeoCities / Lofi: The checkerboard floor is a direct callback to early web design and tiling backgrounds. The patterns on the back wall feel like something you'd find on a MIDI-blasting Angelfire page. The whole vibe is low-fidelity but intentionally stylized.
+DMT / Cosmic: The impossible architecture, the glowing celestial light, the swirling nebulae visible through the "windows," and the shimmering, otherworldly colors give it that psychedelic, reality-bending quality. The stage isn't just lit; it's being bathed in cosmic energy.
+Barbie Aesthetic: The color palette is pure Barbie Dreamhouse on a cosmic trip. The hyper-pinks, iridescent purples, and shimmering teals create an atmosphere that is unapologetically fabulous and glamorous, yet deeply strange.
+Potential Hotspots for Gameplay:
+The Stage: Clicking here would be the trigger for a character to begin their performance.
+The Microphone: Could be examined for a funny description ("It smells faintly of ozone, desperation, and bubblegum.")
+The Bar: A place to talk to an NPC or find a quest item (like Nabu's cosmic drink).
+The Tables: You could click on them to get observations about the weirdos who usually sit there.
+The Swirling Portal "Windows": Examining these could provide cryptic lore about the Galactic Federation or Nabu's origins.
