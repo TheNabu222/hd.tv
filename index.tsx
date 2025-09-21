@@ -64,6 +64,8 @@ const ParallaxBackground: React.FC = () => {
 
 // --- Sound & Music Implementation ---
 let currentMusic: HTMLAudioElement | null = null;
+let currentMusicId: string | null = null;
+let musicEnabled = true;
 // const activeSounds: HTMLAudioElement[] = []; // Optional: for managing multiple SFX instances
 
 const SFX_URL_MAP: Record<string, string> = {
@@ -148,7 +150,12 @@ const playSound = (soundId: string) => {
 };
 
 const playMusic = (trackId: string, loop: boolean = true) => {
+  currentMusicId = trackId;
   stopCurrentMusic();
+  if (!musicEnabled) {
+    console.log(`[MUSIC MUTED]: ${trackId}`);
+    return;
+  }
   const musicUrl = MUSIC_URL_MAP[trackId];
 
   if (musicUrl) {
@@ -510,73 +517,28 @@ const InGameScreen: React.FC<{ storyState: CurrentStoryState; onChoice: (nextNod
 const SettingsScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Settings" className="app-container" onClose={onBack}> <h2>Game Settings</h2> <p>Settings will appear here.</p> <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 const ProfilesScreen: React.FC<{onBack: () => void}> = ({onBack}) => ( <StyledWindow title="Protagonist Profiles" className="app-container" onClose={onBack}> <h2>Character Profiles</h2> <p style={{marginBottom: '20px', fontSize: '13px', color: '#333333'}}>Meet the minds shaping Rogers Park.</p> {Object.values(CHARACTERS).map(char => ( <div key={char.id} style={{ marginBottom: '20px', padding: '10px', border: '1px solid #D4D0C8', backgroundColor: '#F9F9F9' }}> <h3 style={{marginTop: 0, marginBottom: '5px', fontSize: '16px', color: '#1a1a1a'}}>{char.name}</h3> <p style={{fontSize: '14px', lineHeight: '1.5', margin: 0, color: '#1a1a1a'}}> {char.description} </p> {(char.id === 'rizzlord') && <p style={{fontSize: '12px', color: '#B22222', marginTop: '8px', fontStyle: 'italic'}}>This protagonist is currently locked.</p>} </div> ))} <button onClick={() => {playSound("ui_menu_back.sfx"); onBack();}} style={{marginTop: '20px'}}>Back</button> </StyledWindow> );
 
-const SaveLoadWindow: React.FC<{ mode: 'save' | 'load'; storyState: CurrentStoryState; onClose: () => void; onLoad: (state: CurrentStoryState) => void; }> = ({ mode, storyState, onClose, onLoad }) => {
-  const [saves, setSaves] = useState<SavedGame[]>([]);
-
-  useEffect(() => { setSaves(loadSavedGames()); }, []);
-
-  const handleCreateSave = () => {
-    if (!storyState.characterId || !storyState.currentNodeId) return;
-    addSavedGame(storyState);
-    setSaves(loadSavedGames());
-  };
-
-  const handleOverwrite = (id: string) => {
-    if (!storyState.characterId || !storyState.currentNodeId) return;
-    updateSavedGame(id, storyState);
-    setSaves(loadSavedGames());
-  };
-
-  const handleLoad = (id: string) => {
-    const slot = loadSavedGames().find(s => s.id === id);
-    if (slot) {
-      onLoad(deserializeStoryState(slot.storyState));
-      onClose();
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    deleteSavedGame(id);
-    setSaves(loadSavedGames());
-  };
-
-  return (
-    <StyledWindow title={mode === 'save' ? 'Save Game' : 'Load Game'} className="app-container" onClose={onClose}>
-      {mode === 'save' && (
-        <button onClick={() => { playSound("ui_button_click_general.sfx"); handleCreateSave(); }} disabled={!storyState.characterId || !storyState.currentNodeId}>
-          Save Current Progress
-        </button>
-      )}
-      <ul className="choices-list" style={{ marginTop: '10px' }}>
-        {saves.map(slot => (
-          <li key={slot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-            <span style={{ fontSize: '12px' }}>
-              {slot.storyState.characterId || 'Unknown'} - {new Date(slot.timestamp).toLocaleString()}
-            </span>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              {mode === 'load' ? (
-                <button onClick={() => { playSound("ui_menu_select.sfx"); handleLoad(slot.id); }}>Load</button>
-              ) : (
-                <button onClick={() => { playSound("ui_button_click_general.sfx"); handleOverwrite(slot.id); }}>Overwrite</button>
-              )}
-              <button onClick={() => { playSound("ui_window_close.sfx"); handleDelete(slot.id); }}>Delete</button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {saves.length === 0 && <p>No saved games.</p>}
-    </StyledWindow>
-  );
-};
 
 const DESKTOP_STAR_COLORS = ['#00ffcc', '#7722ff', '#bc72fa', '#72fade'];
 const NUM_DESKTOP_STARS = 40;
 const CURSED_POINTER_TRAIL_COLORS = ['#72fade', '#bc72fa', '#defade', '#bc7fff'];
 
+const createDesktopStars = (container: HTMLElement) => {
+  for (let i = 0; i < NUM_DESKTOP_STARS; i++) {
+    const star = document.createElement('div');
+    star.className = 'desktop-star';
+    star.style.left = `${Math.random() * 100}vw`;
+    star.style.top = `${Math.random() * 100}vh`;
+    star.style.backgroundColor = DESKTOP_STAR_COLORS[Math.floor(Math.random() * DESKTOP_STAR_COLORS.length)];
+    star.style.animationDelay = `${Math.random() * 5}s`;
+    star.style.animationDuration = `${Math.random() * 3 + 3}s`;
+    container.appendChild(star);
+  }
+};
+
 const Clock: React.FC = () => {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const timerId = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timerId); }, []);
-  return <div id="taskbar-clock">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>;
+  return <div id="taskbar-clock" style={{ marginLeft: 0 }}>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>;
 };
 
 const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) => void; closeMenu: () => void; openSaveLoad: (mode: 'save' | 'load') => void; canSave: boolean; }> = ({ isOpen, onNavigate, closeMenu, openSaveLoad, canSave }) => {
@@ -595,9 +557,19 @@ const StartMenu: React.FC<{ isOpen: boolean; onNavigate: (screen: GameScreen) =>
   );
 };
 
-const Taskbar: React.FC<{ onStartButtonClick: () => void; currentWindowTitle: string; }> = ({ onStartButtonClick, currentWindowTitle }) => {
+const Taskbar: React.FC<{ onStartButtonClick: () => void; currentWindowTitle: string; isMusicEnabled: boolean; onMusicToggle: () => void; }> = ({ onStartButtonClick, currentWindowTitle, isMusicEnabled, onMusicToggle }) => {
   const handleStartClick = () => { playSound("ui_start_button_click.sfx"); onStartButtonClick(); };
-  return ( <div id="taskbar"> <button id="start-button" onClick={handleStartClick}><img src="assets/images/ui/star_icon.png" alt="Start" style={{width: '16px', height: '16px', imageRendering: 'pixelated'}} /></button> <div id="taskbar-app-title" title={currentWindowTitle}>{currentWindowTitle}</div> <Clock /> </div> );
+  const handleMusicClick = () => { playSound("ui_button_click_minor.sfx"); onMusicToggle(); };
+  return (
+    <div id="taskbar">
+      <button id="start-button" onClick={handleStartClick}><img src="assets/images/ui/star_icon.png" alt="Start" style={{width: '16px', height: '16px', imageRendering: 'pixelated'}} /></button>
+      <div id="taskbar-app-title" title={currentWindowTitle}>{currentWindowTitle}</div>
+      <div style={{ display:'flex', alignItems:'center', marginLeft:'auto' }}>
+        <button id="music-toggle" onClick={handleMusicClick} style={{ padding:'3px 8px', marginRight:'5px' }}>{isMusicEnabled ? '🔊' : '🔇'}</button>
+        <Clock />
+      </div>
+    </div>
+  );
 };
 
 const App: React.FC = () => {
@@ -606,6 +578,7 @@ const App: React.FC = () => {
   const [selectedCodexEntryId, setSelectedCodexEntryId] = useState<string | null>(null);
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   const [currentTaskbarTitle, setCurrentTaskbarTitle] = useState(GAME_TITLE + " - Main Menu");
+  const [isMusicOn, setIsMusicOn] = useState(true);
   const startMenuRef = useRef<HTMLDivElement>(null);
   const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load' | null>(null);
 
@@ -613,8 +586,10 @@ const App: React.FC = () => {
   
   useEffect(() => {
     setStoryState(prevState => ({ ...prevState, unlockedCodexEntries: initializeUnlockedCodex() }));
-    // const bgContainer = document.getElementById('desktop-bg-container'); // Desktop stars removed for image bg
-    // if (bgContainer && !bgContainer.hasChildNodes()) { for (let i = 0; i < NUM_DESKTOP_STARS; i++) { const star = document.createElement('div'); star.className = 'desktop-star'; star.style.left = `${Math.random() * 100}vw`; star.style.top = `${Math.random() * 100}vh`; star.style.backgroundColor = DESKTOP_STAR_COLORS[Math.floor(Math.random() * DESKTOP_STAR_COLORS.length)]; star.style.animationDelay = `${Math.random() * 5}s`; star.style.animationDuration = `${Math.random() * 3 + 3}s`; bgContainer.appendChild(star); } }
+    const bgContainer = document.getElementById('desktop-bg-container');
+    if (bgContainer && !bgContainer.hasChildNodes()) {
+      createDesktopStars(bgContainer);
+    }
     let lastTrailTime = 0; const trailCooldown = 60; 
     const handleMouseMove = (event: MouseEvent) => { const currentTime = Date.now(); if (currentTime - lastTrailTime < trailCooldown) return; lastTrailTime = currentTime; if (Math.random() < 0.3) { const particle = document.createElement('div'); particle.className = 'mouse-trail-particle'; particle.style.left = `${event.clientX -2}px`; particle.style.top = `${event.clientY -2}px`; particle.style.backgroundColor = CURSED_POINTER_TRAIL_COLORS[Math.floor(Math.random() * CURSED_POINTER_TRAIL_COLORS.length)]; document.body.appendChild(particle); requestAnimationFrame(() => particle.classList.add('fade-out')); setTimeout(() => { if (particle.parentNode) particle.parentNode.removeChild(particle); }, 700); } };
     document.addEventListener('mousemove', handleMouseMove);
@@ -673,6 +648,18 @@ const App: React.FC = () => {
 
   const handleSelectCodexEntry = (entryId: string) => setSelectedCodexEntryId(entryId);
   const toggleStartMenu = () => setIsStartMenuOpen(prev => !prev);
+  const toggleMusic = () => {
+    setIsMusicOn(prev => {
+      const next = !prev;
+      musicEnabled = next;
+      if (!next) {
+        stopCurrentMusic();
+      } else if (currentMusicId) {
+        playMusic(currentMusicId);
+      }
+      return next;
+    });
+  };
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -692,7 +679,7 @@ const App: React.FC = () => {
         <div id="main-content-area" style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {renderScreen()}
         </div>
-        <Taskbar onStartButtonClick={toggleStartMenu} currentWindowTitle={currentTaskbarTitle} />
+        <Taskbar onStartButtonClick={toggleStartMenu} currentWindowTitle={currentTaskbarTitle} isMusicEnabled={isMusicOn} onMusicToggle={toggleMusic} />
       </div>
       {saveLoadMode && (
         <SaveLoadWindow
